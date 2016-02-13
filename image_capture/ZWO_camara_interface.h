@@ -1,8 +1,16 @@
 /* ZWO_camera_interface.h
-	Header file for high level camera interface
-	HABOP 2016
-*/
-
+ * 
+ * Header file for the functions that allow for the capturing of images
+ *
+ * Authors:	Zack Frazee, Seth Kreitinger
+ * 
+ *
+ * Revions:
+ * 2016-02-11	v0.1	Initial Revison
+ * 2016-02-12	v0.2    Image Data Structers and Necesary Includes Added
+ *
+ */
+ 
 //DEFINE
 #ifndef ZWO_CAM_h
 #define ZWO_CAM_h

@@ -1,3 +1,16 @@
+/* ZWO_camera_interface.c
+ * 
+ * Source file for c functions that allow for the capturing of images
+ *
+ * Authors:	Zack Frazee, Seth Kreitinger
+ * 
+ *
+ * Revions:
+ * 2016-02-11	v0.1	Initial Revison
+ * 2016-02-12	v0.2    Base code and error reporting added
+ *
+ */
+
 #include "ZWO_camera_interface.h"
 
 //ZWO_Setup
