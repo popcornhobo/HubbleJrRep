@@ -12,9 +12,19 @@
 
 #include "quaternion_math.h"
 
-quaternion quatMult(quaternion)
+quaternion quatMult(p,q)
 {
+	double crossProd_q1 = p.q2*q.q3 - p.q3*q.q2;
+	double crossProd_q2 = p.q3*q.q1 - p.q1*q.q3;
+	double crossProd_q3 = p.q1*q.q2 - p.q2*q.q1;
 
+	double p0_q1 = p.q0 * q.q1;
+	double p0_q2 = p.q0 * q.q2;
+	double p0_q3 = p.q0 * q.q3;
+
+	double q0_p1 = q.q0 * p.q1;
+	double q0_p2 = q.q0 * p.q2;
+	double q0_p3 = q.q0 * p.q3;
 }
 
 quaternion quatConj(quaternion)
