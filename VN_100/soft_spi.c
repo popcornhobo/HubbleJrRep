@@ -34,7 +34,7 @@ void spi_init(void * virtual_base ){
 	is_initialized = 1;
 }
 
-int SPI_Read_Write(uint8_t data_out){
+uint8_t SPI_Read_Write(uint8_t data_out){
 	//receive variable
 	uint8_t data_in = 0;
 	
@@ -93,7 +93,7 @@ void SPI_SS(char state){
 	}
 }
 
-int SPI_MISO(){
+uint8_t SPI_MISO(){
 	return (*(uint32_t *)spi_pio_data >> 2) & 1;
 	
 }

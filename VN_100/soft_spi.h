@@ -50,7 +50,7 @@
 void spi_init();
 
 //performs an SPI read write
-int SPI_Read_Write(uint8_t data_out);
+uint8_t SPI_Read_Write(uint8_t data_out);
 
 //controls SPI clock line
 void SPI_Clock(char state);
@@ -62,6 +62,6 @@ void SPI_MOSI(char state);
 void SPI_SS(char state);
 
 //reads MISO
-int SPI_MISO();
+uint8_t SPI_MISO();
 
 #endif

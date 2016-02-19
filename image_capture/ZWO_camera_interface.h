@@ -57,7 +57,7 @@ Sets up the camera's configurating and connection, returns an error packet
 		5 when configuration failed
 		6 unknown error
 */
-char ZWO_Setup();
+int ZWO_Setup();
 
 /*
 ZWO_Start_Exposure
@@ -68,7 +68,7 @@ ZWO_Start_Exposure
 		0 when no error
 		1 when exception thrown starting exposure
 */
-char ZWO_Start_Exposure(int desired_exp_time);
+int ZWO_Start_Exposure(int desired_exp_time);
 
 
 /*ZWO_Check_Exposure_Status
@@ -79,7 +79,7 @@ char ZWO_Start_Exposure(int desired_exp_time);
 		2 when the camera is still working an exposure
 		3 when exposure has failed
 */
-char ZWO_Check_Exposure_Status();
+int ZWO_Check_Exposure_Status();
 
 
 /*	ZWO_End_Exposure
@@ -94,7 +94,7 @@ char ZWO_Check_Exposure_Status();
 		3 when error saving to file
 		4 when unknown error
 */
-char ZWO_End_Exposure(int image_number);
+int ZWO_End_Exposure(int image_number);
 
 
 /*ZWO_Stop
@@ -107,7 +107,7 @@ char ZWO_End_Exposure(int image_number);
 		4 when failed ro release openCV image
 		5 when unknown error
 */
-char ZWO_Stop();
+int ZWO_Stop();
 
 //END
 #endif

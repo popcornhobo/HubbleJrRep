@@ -87,8 +87,8 @@ all:test_console test_gui1_video test_gui1_snap test_gui2_snap
 test_console: main_console.cpp
 	$(CC) main_console.cpp -o test_console $(CFLAGS) $(OPENCV) -lASICamera
 	cp test_console bin/$(platform)/
-ZWO_camera_interface.so: ZWO_camera_interface.c
-	$(CC) -shared -o $^ $(CFLAGS) $(OPENCV) -lASICamera ZWO_camera_interface.c 
+ZWO_camera_interface.so: 
+	$(CC) -shared -o ZWO_camera_interface.so $(CFLAGS) $(OPENCV) -lASICamera ZWO_camera_interface.c 
 	
 camera: camera.c
 	$(CC) camera.c -o camrea $(CFLAGS) $(OPENCV) -lASICamera

@@ -14,7 +14,7 @@
 
 //ZWO_Setup
 //Sets up the camera's configurating and connection, returns an error packet
-char ZWO_Setup(){
+int ZWO_Setup(){
 	if(getNumberOfConnectedCameras() < 1){
 		return 1;
 	}
@@ -48,7 +48,7 @@ char ZWO_Setup(){
 
 //ZWO_Start_Exposure
 //Starts a camera Exposure and returns an error packet
-char ZWO_Start_Exposure(int desired_exp_time){
+int ZWO_Start_Exposure(int desired_exp_time){
 		setValue(CONTROL_EXPOSURE, desired_exp_time, false); //ms//auto
 		startExposure();
 		return 0;
@@ -56,7 +56,7 @@ char ZWO_Start_Exposure(int desired_exp_time){
 
 //ZWO_Check_Exposure_Status
 //Checks if the camara is ready to have an image pulled from it.
-char ZWO_Check_Exposure_Status(){
+int ZWO_Check_Exposure_Status(){
 	EXPOSURE_STATUS status = getExpStatus();
 	
 	switch(status)
@@ -84,54 +84,58 @@ char ZWO_Check_Exposure_Status(){
 
 //ZWO_End_Exposure
 //Stops the current exposure and saves the resulting image to a file named image_(date)_(image_number).jpg
-char ZWO_End_Exposure(int image_number){
-
+int ZWO_End_Exposure(int image_number){
+ 
 	if(!getImageAfterExp((unsigned char*)pRgb->imageData, pRgb->imageSize)){
 		return 1;
 	}
 	
 	cv::Mat image = cv::cvarrToMat(pRgb);
 	
-	if(image = NULL){
-		return 2
-	}
+	//if(image == NULL){
+	//	return 2;
+	//}
 	
 	time_t t = time(NULL);
 	struct tm tm = *localtime(&t);
 	
 	char name[50];
 	
-	char name[0] = 'C';
-	char name[1] = 'a';
-	char name[2] = 'p';
-	char name[3] = 't';
-	char name[4] = 'u';
-	char name[5] = 'r';
-	char name[6] = 'e';
-	char name[7] = '_';
+	name[0] = 'C';
+	name[1] = 'a';
+	name[2] = 'p';
+	name[3] = 't';
+	name[4] = 'u';
+	name[5] = 'r';
+	name[6] = 'e';
+	name[7] = '_';
 	
 	int i = 8;
 	if((tm.tm_mon + 1) > 9){
-		char name[i++] = (tm.tm_mon + 1)/10;
-		char name[i++] = (tm.tm_mon  - 9);
+		name[i++] = (tm.tm_mon + 1)/10;
+		name[i++] = (tm.tm_mon  - 9);
 	}else{
-		char name[i++] = (tm.tm_mon + 1);
+		name[i++] = (tm.tm_mon + 1);
 	}
 	
-	char name[i++] = '-';
+	name[i++] = '-';
 	
 	if(tm.tm_mday > 9){
-		char name[i++] = (tm.tm_mday /10);
-		char name[i++] = (tm.tm_mday  - 10*(tm.tm_mday /10));
+		name[i++] = (tm.tm_mday /10);
+		name[i++] = (tm.tm_mday  - 10*(tm.tm_mday /10));
 	} else {
-		char name[i++] = tm.tm_mday;
+		name[i++] = tm.tm_mday;
 	}
 	
-	char name[i++] = '_';
+	name[i++] = '_';
 	
-	char name[i++] = (image_number +  48);
+	name[i++] = (image_number +  48);
 	
-	char name[i++] = '\0';
+	name[i++] = '.';
+	name[i++] = 'j';
+	name[i++] = 'p';
+	name[i++] = 'g';
+	name[i++] = '\0';
 	
 	cv::imwrite(name, image);
 	
@@ -141,7 +145,7 @@ char ZWO_End_Exposure(int image_number){
 
 //ZWO_Stop
 //Stops all camera capture and closes the usb interface
-char ZWO_Stop(){
+int ZWO_Stop(){
 	stopCapture();
 	
 	closeCamera();
