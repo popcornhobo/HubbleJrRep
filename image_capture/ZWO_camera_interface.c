@@ -20,7 +20,7 @@ int ZWO_Setup(){
 	}
 	
 	if(!openCamera(CAMERA_NUMBER)){
-		return 2;
+		return 2;   
 	}
 
 	if(!initCamera()){

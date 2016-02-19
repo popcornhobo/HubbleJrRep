@@ -1,8 +1,4 @@
 /* ZWO_camera_interface.h
-	Header file for high level camera interface
-	HABOP 2016
-*/
-/* ZWO_camera_interface.h
  * 
  * Source file for c functions relating to the control system
  *
@@ -15,7 +11,7 @@
  * */
 
 //DEFINE
-#ifndef ZWO_CAM_h
+#ifndef ZWO_CAM_h   
 #define ZWO_CAM_h
 
 //INCLUDES
@@ -56,7 +52,7 @@ Sets up the camera's configurating and connection, returns an error packet
 		4 when failed to create openCV image
 		5 when configuration failed
 		6 unknown error
-*/
+*/ 
 int ZWO_Setup();
 
 /*
