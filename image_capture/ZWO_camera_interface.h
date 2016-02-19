@@ -8,10 +8,10 @@
  * Revions:
  * 2016-02-11	v0.1	Initial Revison
  *
- * */
+ * */ 
 
 //DEFINE
-#ifndef ZWO_CAM_h   
+#ifndef ZWO_CAM_h    
 #define ZWO_CAM_h
 
 //INCLUDES

@@ -6,8 +6,8 @@
  * 
  *
  * Revions:
- * 2016-02-11	v0.1	Initial Revison
- *
+ * 2016-02-11	v0.1	Initial Revison 
+ * 
  * */
 
 #include "ZWO_camera_interface.h"

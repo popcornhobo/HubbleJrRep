@@ -4,13 +4,13 @@
  *
  * Authors:	Seth Kreitinger
  * 
- *
+ *   
  * Revions:
  * 2016-02-12	v0.1	Initial Revison
  * 2016-02-12	v0.9    Untested Code Complete
  *
  * */
-
+ 
 #include "quaternion_math.h"
 
 quaternion quatMult(p,q)

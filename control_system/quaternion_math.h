@@ -8,7 +8,7 @@
  * Revisions:
  * 2016-02-12	v0.1	File Creation
  *
- * */
+ * */ 
 
 #ifndef _QUATERNION_MATH_H_
 #define _QUATERNION_MATH_H_
