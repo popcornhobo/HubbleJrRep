@@ -2,7 +2,7 @@
  *
  * Header file for control_system.c
  *
- * Authors:	Thomas Rader
+ * Authors:	Thomas Rader, Seth Kreitinger, Zach Frazee
  *
  *
  * Revisions:
