@@ -15,8 +15,8 @@
 #define __CONTROL_SYSTEM_H__
 
 #include "quaternion_math.h"
-#include "..//VN_100//VN_lib.h"
-#include "..//VN_100//soft_spi.h"
+#include "../VN_100/VN_lib.h"
+#include "../VN_100/soft_spi.h"
 #include <stdio.h>
 #include <math.h>
 
