@@ -2,6 +2,7 @@
 import ctypes
 
 _controlSystem = ctypes.CDLL('control_system.so')
+
 _controlSystem.control_system_update.restype = ctypes.c_int
 
 _controlSystem.update_gains.argtypes = (ctypes.c_float, ctypes.c_float, ctypes.c_float)
@@ -15,7 +16,9 @@ def control_system_update():
 
 def set_as_current_position():
 	global _controlSystem
+	print "help me"
 	_controlSystem.set_as_current_position()
+	print "im saved"
 
 def rotate_current_position(yaw, pitch, roll):
 	global _controlSystem
