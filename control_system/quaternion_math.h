@@ -25,10 +25,10 @@ struct quaternion {
 
 /* Function Prototypes */
 
-quaternion quatMult(quaternion);
+quaternion quatMult(quaternion p, quaternion q);
 
-quaternion quatConj(quaternion);
+quaternion quatConj(quaternion quat);
 
-quaternion quatNorm(quaternion);
+quaternion quatNorm(quaternion quat);
 
 #endif

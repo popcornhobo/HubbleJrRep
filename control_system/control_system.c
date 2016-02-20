@@ -9,10 +9,13 @@
  * 2016-02-11	v0.1	Initial Revison 
  * 2016-02-12	v0.2    Added Quaternion Error Calculation
  * */
- 
+
 #include "control_system.h"
 #include "quaternion_math.h"
-#include "VN_lib.h"
+#include "..\\VN_100\\VN_lib.h"
+#include "..\\VN_100\\soft_spi.h"
+
+
 // User defines
 #define True 1
 #define False 0
@@ -28,7 +31,7 @@
 
 // User Global Variables
 unsigned char sensorID = 0;
-static isInitialized = False;
+static int isInitialized = False;
 void* Servo_Set_Pitch;
 void* Servo_Error_Pitch;
 void* Servo_Set_Roll;
@@ -45,6 +48,9 @@ double control_system_update(double q0, double q1, double q2, double q3)
 	* Multiply gain by error
 	* Command Servos
 	*/
+	
+	double quaternionSum = 0;
+	
 	if(isInitialized)
 	{
 		double xerr,yerr,zerr;
@@ -52,7 +58,7 @@ double control_system_update(double q0, double q1, double q2, double q3)
 		float rates[3];
 		quaternion qerr;
 
-		VN100_SPI_GetQuatRates(sensorID, &q, &rates);
+		VN100_SPI_GetQuatRates(sensorID, q, rates);
 		quaternion qpos = {.q0 = q[0], .q1 = q[1], .q2 = q[2], .q3 = q[3]};
 		quaternion qref = {.q0 = q0, .q1 = q1, .q2 = q2, .q3 = q3};
 
@@ -75,8 +81,8 @@ double control_system_update(double q0, double q1, double q2, double q3)
 		yerr = qerr.q2;
 		zerr = qerr.q3;
 		/*------------------------------------------------------------------------------*/
-
-		double quaternionSum = q0+q1+q2+q3;	//Ensure data was received properly
+ 
+		quaternionSum = q0+q1+q2+q3;	//Ensure data was received properly	
 	}
 	else
 	{
@@ -123,7 +129,7 @@ int control_system_init()
 	return 0;
 }
 
-void update_servos(int Pitch, int Yaw, Roll)
+void update_servos(int Pitch, int Yaw, int Roll)
 {
 	
 }
