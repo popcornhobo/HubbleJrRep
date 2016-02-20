@@ -2,7 +2,7 @@
  * 
  * Source file for c functions relating to the control system
  *
- * Authors:	Thomas Rader, Seth Kreitinger
+ * Authors:	Thomas Rader, Seth Kreitinger, Zach Frazee
  * 
  *
  * Revions:  
@@ -29,10 +29,11 @@
 #include "control_system.h"
 
 /* Local Function Prototypes */
-void update_servos(int Pitch, int Yaw, int Roll);
+void update_servos(double Pitch, double Yaw, double Roll);
 
 /* Global User Variables */
 unsigned char sensorID = 0;
+double P, I, D =0.0;
 quaternion reference;
 static int isInitialized = False;
 void* Servo_Set_Pitch;
@@ -68,19 +69,26 @@ int control_system_update()
 		*	error.
 		*/
 		// Normalize the quaternions
-		qerr = quatNorm(qpos);
+		qpos = quatNorm(qpos);
 		qref = quatNorm(qref);
 		// Calculate the quaternion error
 		qerr = quatMult(qpos, quatConj(qref));
 		// The quaternion error needs to be adjusted to represent the shortest path
-		if(qerr.q0 < 0)
-		{
-			qerr = quatConj(qerr);
-		}
+		
 		// The three imaginary components now represent the per-axis errors of the system
-		xerr = qerr.q1;
-		yerr = qerr.q2;
-		zerr = qerr.q3;
+		xerr = qerr.q1*qerr.q0;
+		yerr = qerr.q2*qerr.q0;
+		zerr = qerr.q3*qerr.q0;
+
+		/* Apply the gains */
+		xerr *= P;
+		yerr *= P;
+		zerr *= P;
+		/* Update Servos
+		 * X is pitch
+		 * Y is roll
+		 * Z is yaw */
+		update_servos(xerr, zerr, yerr);
 		/*------------------------------------------------------------------------------*/
 	}
 	else
@@ -128,10 +136,6 @@ int control_system_init()
 	return 0;
 }
 
-void update_servos(int Pitch, int Yaw, int Roll)
-{
-	
-}
 
 void set_as_current_position()
 {
@@ -146,12 +150,90 @@ void set_as_current_position()
 	
 }
 
-void rotate_current_position(float yaw, float pitch, float roll)
+void rotate_current_position(float pitch, float yaw, float roll)
 {
 
 }
 
-void update_gains( float P, float I, float D)
+void update_gains( float new_P, float new_I, float new_D)
 {
+	P = new_P;
+	I = new_I;
+	D = new_D;
+}
 
+
+
+/* Local Functions */
+
+/* update_servos
+ * X is pitch
+ * Y is Roll
+ * Z is Yaw
+*/
+void update_servos(double Pitch, double Yaw, double Roll)
+{
+	/* Calculate */	
+	/* First determine if value is positive or negatve
+	 * then load the value into the servo
+	*/
+	/* Scale Error to match motor */
+	Pitch *= 1023;
+	Yaw   *= 1023;
+	Roll  *= 1023;
+	/* Update Pitch */
+	if (Pitch < 0)
+	{
+		Pitch = abs(Pitch) + 1024; // 1024 is where negative values start for the motor
+
+		if(Pitch > 2047)
+		{
+			Pitch = 2047;
+		}
+	}
+	else
+	{
+		if(Pitch > 1023)
+		{
+			Pitch = 1023;
+		}
+	}
+
+	/* Update Yaw */
+	if (Yaw < 0)
+	{
+		Yaw = abs(Yaw) + 1024; // 1024 is where negative values start for the servo
+		if(Yaw > 2047)
+		{
+			Yaw = 2047;
+		}
+	}
+	else
+	{
+		if(Pitch > 1023)
+		{
+			Pitch = 1023;
+		}
+	}
+	/* Update Roll */
+	if (Roll < 0)
+	{
+		Roll = abs(Roll) + 1024; // 1024 is where negative values start for the servo
+		if(Roll> 2047)
+		{
+			Roll = 2047;
+		}
+	}
+	else
+	{
+		if(Pitch > 1023)
+		{
+			Pitch = 1023;
+		}
+	}
+
+	/* Send the servo commands */	
+	*(unit_32*) Servo_Set_Pitch= floor(Pitch);
+	*(unit_32*) Servo_Set_Yaw= floor(Yaw);
+	*(unit_32*) Servo_Set_Roll= floor(Roll);
 }

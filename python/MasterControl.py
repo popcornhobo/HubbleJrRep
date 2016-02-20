@@ -87,7 +87,7 @@ class updateControlSystemThread(threading.Thread):
     def __init__(self,):
         threading.Thread.__init__(self)
         self._stop = threading.Event()
-
+    
     def run(self):
         global run_status
         print "Starting Cntrl\n"
