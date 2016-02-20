@@ -43,33 +43,27 @@ class userInputThread(threading.Thread):
                     val = regex_val_int.search(input)
                     if val:
                         print "P: ", int(val.group(),10)
-                        with run_status_lock:
-                            run_status = "Stop"
-                        p = int(val.group())        #Converts the regex parsed input value to an int and store as tilt center
-                        with run_status_lock:
-                            run_status = "Start"
+                        with control_system_lock:
+                            p = int(val.group())        #Converts the regex parsed input value to an int and store as tilt center
+                            ControlSystemWrapper.update_gains(p,i,d)
                     else:
                         print "Invalid Value:"
                 elif(cmd.group() == "I:"):
                     val = regex_val_int.search(input)
                     if val:
                         print "I: ", int(val.group())
-                        with run_status_lock:
-                            run_status = "Stop"
-                        i = int(val.group())       #Converts the regex parsed input value to an int and store as pan center
-                        with run_status_lock:
-                            run_status = "Start"
+                        with control_system_lock:
+                            i = int(val.group())       #Converts the regex parsed input value to an int and store as pan center
+                            ControlSystemWrapper.update_gains(p,i,d)
                     else:
                         print "Invalid Value"
                 elif(cmd.group() == "D:"):
                     val = regex_val_int.search(input)
                     if val:
                         print "D: ", int(val.group())
-                        with run_status_lock:
-                            run_status = "Stop"
-                        d = int(val.group())       #Converts the regex parsed input value to an int and store as pan center
-                        with run_status_lock:
-                            run_status = "Start"
+                        with control_system_lock:
+                            d = int(val.group())       #Converts the regex parsed input value to an int and store as pan center
+                            ControlSystemWrapper.update_gains(p,i,d)
                     else:
                         print "Invalid Value"
                 else:
@@ -89,32 +83,43 @@ class userInputThread(threading.Thread):
 
 """----------------------------------------------------------------------------------"""
 
-class updateControlSystem(threading.Thread):
+class updateControlSystemThread(threading.Thread):
     def __init__(self,):
         threading.Thread.__init__(self)
-
+        self._stop = threading.Event()
+    
     def run(self):
+        global run_status
         print "Starting Cntrl\n"
-        ControlSystemWrapper.control_system_update()
+        startTime = 0
+        status = 0
+        while not (run_status == "Quit" and self._stop.isSet()):
+            with control_system_lock:
+                ControlSystemWrapper.update_gains(p,i,d)
+            while (run_status == "Run") and (time.time() - startTime > 1/refreshRate) and not(self._stop.isSet()):
+                startTime = time.time()
+                with control_system_lock:
+                    status = ControlSystemWrapper.control_system_update()
+                    if status == -1:
+                        print "Control System Init Error\n"
+                        with run_status_lock:
+                            run_status = "Quit"
+            with control_system_lock:
+                ControlSystemWrapper.update_gains(0,0,0)
         print "Exiting Cntrl\n"
 
-class startExposure(threading.Thread):
+    def stop(self):
+        self._stop.set()
+
+class captureImage(threading.Thread):
     def __init__(self,):
         threading.Thread.__init__(self)
 
     def run(self):
+        global captureStart
         print "Starting StrExp\n"
         #insert call to python wrapper for camera start exposure
         print "Exiting StrExp\n"
-
-class stopExposure(threading.Thread):
-    def __init__(self,):
-        threading.Thread.__init__(self)
-
-    def run(self):
-        print "Starting HltExp\n"
-        #insert call to python wrapper for camera stop exposure
-        print "Exiting HltExp\n"
 
 ui = userInputThread()
 ui.start()
@@ -124,6 +129,7 @@ exposureTime = 20
 
 run_status = "Stop"
 run_status_lock = threading.Lock()
+control_system_lock = threading.Lock()
 
 threadPool = 3
 curThreadCount = 1
@@ -132,34 +138,18 @@ captureStart = False
 
 ControlSystemWrapper.set_as_current_position()
 
+control_system = updateControlSystemThread()
+control_system.start()
+
 while not(run_status == "Quit"):
+    pass
 
-    while (run_status == "Start"):
-    	if(time.time() - prevCntrlTime >= (1/refreshRate)):
-    		prevCntrlTime = time.time()
-    		cntrlThread = updateControlSystem(p, i, d)
-    		while(threading.active_count() > threadPool):
-    			pass	#Do Nothing
-    		cntrlThread.start()
-
-    	if (not captureStart):
-    		imageThread = startExposure()
-    		while(threading.active_count() > threadPool):
-    			pass	#Do Nothing
-    		captureTime = time.time()
-    		imageThread.start()
-    		captureStart = True
-    	else:
-    		if(time.time() - captureTime >= exposureTime):
-    			imageThread = stopExposure()
-    			while(threading.active_count() > threadPool):
-    				pass	#Do Nothing
-    			imageThread.start()
-    			captureStart= False
-
-if ui:
+if ui.isAlive():
     ui.stop()
-
+    ui.join()
+if control_system.isAlive():
+    control_system.stop()
+    control_system.join()
 
 
 
