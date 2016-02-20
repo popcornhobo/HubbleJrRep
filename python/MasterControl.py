@@ -90,11 +90,8 @@ class userInputThread(threading.Thread):
 """----------------------------------------------------------------------------------"""
 
 class updateControlSystem(threading.Thread):
-    def __init__(self, p, i, d):
+    def __init__(self,):
         threading.Thread.__init__(self)
-        self.p = p
-        self.i = i
-        self.d = d
 
     def run(self):
         print "Starting Cntrl\n"
