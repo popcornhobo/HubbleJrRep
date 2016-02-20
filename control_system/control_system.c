@@ -12,6 +12,19 @@
  * 			Moved defines to .c
  * 			Added set position commands
  * */
+<<<<<<< Updated upstream
+=======
+ 
+#include "control_system.h"
+#include "quaternion_math.h"
+#include "../VN_100/VN_lib.h"
+// User defines
+#define True 1
+#define False 0
+
+#define SET_RATE_ADDR_PITCH		0x00000100
+#define SERVO_ERROR_ADDR_PITCH 	0x0000010C
+>>>>>>> Stashed changes
 
 #include "control_system.h"
 
