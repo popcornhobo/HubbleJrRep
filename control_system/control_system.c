@@ -39,8 +39,6 @@ int control_system_update()
 	* Command Servos
 	*/
 	
-	double quaternionSum = 0;
-	
 	if(isInitialized)
 	{
 		double xerr,yerr,zerr;
@@ -71,8 +69,6 @@ int control_system_update()
 		yerr = qerr.q2;
 		zerr = qerr.q3;
 		/*------------------------------------------------------------------------------*/
- 
-		quaternionSum = q0+q1+q2+q3;	//Ensure data was received properly	
 	}
 	else
 	{
@@ -81,7 +77,7 @@ int control_system_update()
 			return -1;
 		}
 	}
-	return quaternionSum;
+	return 0;
 }
 
 int control_system_init()
@@ -130,7 +126,11 @@ void set_as_current_position()
 	float q[4];
 	float rates[3];
 	VN100_SPI_GetQuatRates(sensorID, q, rates);
-	reference = {.q0 = q[0], .q1 = q[1], .q2 = q[2], .q3 = q[3]};
+	reference.q0 = q[0];
+	reference.q1 = q[1];
+	reference.q2 = q[2];
+	reference.q3 = q[3];
+	
 }
 
 void rotate_current_position(float yaw, float pitch, float roll)
