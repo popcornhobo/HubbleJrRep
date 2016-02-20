@@ -15,8 +15,10 @@
 #define __CONTROL_SYSTEM_H__
 
 #include "quaternion_math.h"
-#include "..//VN_100//VN_lib.h"
-#include "..//VN_100//soft_spi.h"
+#include "../VN_100/VN_lib.h"
+#include "../VN_100/soft_spi.h"
+#include <stdio.h>
+#include <math.h>
 
 /* User Defines */
 #define True 1
@@ -36,8 +38,8 @@ int control_system_init();
 
 void set_as_current_position();
 
-void rotate_current_positon(float yaw, float pitch, float roll);
+void rotate_current_positon(float pitch, float yaw, float roll);
 
-void update_gains(float P, float I, float D);
+void update_gains(float new_P, float new_I, float new_D);
 
 #endif // __CONTROL_SYSTEM_H__
