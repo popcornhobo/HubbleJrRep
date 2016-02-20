@@ -14,10 +14,23 @@
 #ifndef __CONTROL_SYSTEM_H__
 #define __CONTROL_SYSTEM_H__
 
+#define soc_cv_av
+
+#include <stdio.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/mman.h>
+#include "hwlib.h"
+#include "soc_cv_av/socal/socal.h"
+#include "soc_cv_av/socal/hps.h"
+#include "soc_cv_av/socal/alt_gpio.h"
+#include "hps_0.h"
+
 #include "quaternion_math.h"
 #include "../VN_100/VN_lib.h"
 #include "../VN_100/soft_spi.h"
-#include <stdio.h>
+
+#include <stdlib.h>
 #include <math.h>
 
 /* User Defines */

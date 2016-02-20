@@ -1,7 +1,7 @@
 
 import ctypes
 
-_controlSystem = ctypes.CDLL('../control_system_v0.1/control_system_lib.so')
+_controlSystem = ctypes.CDLL('control_system.so')
 _controlSystem.control_system_update.restype = ctypes.c_int
 
 _controlSystem.update_gains.argtypes = (ctypes.c_float, ctypes.c_float, ctypes.c_float)

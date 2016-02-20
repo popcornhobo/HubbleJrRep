@@ -8,6 +8,8 @@ import time
     are properly terminated, and program termination is done safely.
 """
 
+print "Hey im alive!!!"
+
 class userInputThread(threading.Thread):
     def __init__(self,):
         threading.Thread.__init__(self)
@@ -123,6 +125,8 @@ class captureImage(threading.Thread):
 
 ui = userInputThread()
 ui.start()
+
+print "Thread Started"
 
 refreshRate = 100
 exposureTime = 20

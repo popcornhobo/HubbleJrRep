@@ -169,7 +169,7 @@ void update_servos(double Pitch, double Yaw, double Roll)
 	Yaw   *= 1023;
 	Roll  *= 1023;
 	/* Update Pitch */
-	if (Pitch < 0)
+	if (Pitch < 0) 
 	{
 		Pitch = abs(Pitch) + 1024; // 1024 is where negative values start for the motor
 
@@ -220,7 +220,7 @@ void update_servos(double Pitch, double Yaw, double Roll)
 	}
 
 	/* Send the servo commands */	
-	*(unit_32*) Servo_Set_Pitch= floor(Pitch);
-	*(unit_32*) Servo_Set_Yaw= floor(Yaw);
-	*(unit_32*) Servo_Set_Roll= floor(Roll);
+	//*(uint32_t *) Servo_Set_Pitch= floor(Pitch);
+	//*(uint32_t *) Servo_Set_Yaw= floor(Yaw);
+	*(uint32_t *) Servo_Set_Roll= floor(Roll);
 }
