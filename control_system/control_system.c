@@ -197,9 +197,9 @@ void update_servos(double Pitch, double Yaw, double Roll)
 	}
 	else
 	{
-		if(Pitch > 1023)
+		if(Yaw > 1023)
 		{
-			Pitch = 1023;
+			Yaw = 1023;
 		}
 	}
 	/* Update Roll */
@@ -213,9 +213,9 @@ void update_servos(double Pitch, double Yaw, double Roll)
 	}
 	else
 	{
-		if(Pitch > 1023)
+		if(Roll > 1023)
 		{
-			Pitch = 1023;
+			Roll = 1023;
 		}
 	}
 
