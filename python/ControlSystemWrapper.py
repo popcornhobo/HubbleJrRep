@@ -2,10 +2,25 @@
 import ctypes
 
 _controlSystem = ctypes.CDLL('../control_system_v0.1/control_system_lib.so')
-_controlSystem.control_system_update.argtypes = (ctypes.c_double, ctypes.c_double, ctypes.c_double, ctypes.c_double)
-_controlSystem.control_system_update.restype = ctypes.c_double
+_controlSystem.control_system_update.restype = ctypes.c_int
 
-def control_system_update(q0, q1, q2, q3):
+_controlSystem.update_gains.argtypes = (ctypes.c_float, ctypes.c_float, ctypes.c_float)
+
+_controlSystem.rotate_current_position.argtypes = (ctypes.c_float, ctypes.c_float, ctypes.c_float, ctypes.c_float)
+
+def control_system_update():
 	global _controlSystem
-	result = _controlSystem.control_system_update(ctypes.c_double(q0), ctypes.c_double(q1), ctypes.c_double(q2), ctypes.c_double(q3))
-	return float(result)
+	result = _controlSystem.control_system_update()
+	return int(result)
+
+def set_as_current_position():
+	global _controlSystem
+	_controlSystem.set_as_current_position()
+
+def rotate_current_position(yaw, pitch, roll):
+	global _controlSystem
+	_controlSystem.rotate_current_position(yaw,pitch,roll)
+
+def update_gains(p, i, d):
+	global _controlSystem
+	_controlSystem.update_gains(p,i,d)
