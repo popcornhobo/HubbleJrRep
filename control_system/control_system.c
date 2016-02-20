@@ -220,7 +220,7 @@ void update_servos(double Pitch, double Yaw, double Roll)
 	}
 
 	/* Send the servo commands */	
-	*(uint32_t *) Servo_Set_Pitch= floor(Pitch);
-	*(uint32_t *) Servo_Set_Yaw= floor(Yaw);
+	//*(uint32_t *) Servo_Set_Pitch= floor(Pitch);
+	//*(uint32_t *) Servo_Set_Yaw= floor(Yaw);
 	*(uint32_t *) Servo_Set_Roll= floor(Roll);
 }
