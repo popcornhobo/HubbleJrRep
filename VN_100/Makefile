@@ -7,15 +7,15 @@ ARCH= arm
 
 all: VN_lib.so VN_user.so VN_math.so soft_spi.so VN100.so 
 
-VN_lib.so: VN_lib.o
+VN_lib.so: VN_lib.o soft_spi.o VN_user.o VN_math.o VN100.o
 	$(CC) $(LDFLAGS) $^ -shared -o $@  
-VN_user.so: VN_user.o
+VN_user.so: VN_user.o soft_spi.o VN_lib.o VN_user.o VN_math.o VN100.o
 	$(CC) $(LDFLAGS) $^ -shared -o $@  
-VN_math.so: VN_math.o
+VN_math.so: VN_math.o soft_spi.o VN_lib.o VN_user.o VN_math.o VN100.o
 	$(CC) $(LDFLAGS) $^ -shared -o $@  
-VN100.so: VN100.o
+VN100.so: VN100.o soft_spi.o VN_lib.o VN_user.o VN_math.o
 	$(CC) $(LDFLAGS) $^ -shared -o $@  
-soft_spi.so: soft_spi.o
+soft_spi.so: soft_spi.o 
 	$(CC) $(LDFLAGS) -fPIC $^ -shared -o $@  
 	
 %.o : %.c

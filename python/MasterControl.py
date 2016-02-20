@@ -1,7 +1,20 @@
+print "Hey im alive!!!"
+
 import ControlSystemWrapper
-import ImageCaptureWrapper
+
+print "ControlSystemWrapper imported"
+
+#import ImageCaptureWrapper
+
+print "ImageCaptureWrapper imported"
+
 import threading 
+
+print "threading imported!"
+
 import time
+
+print "time imported"
 
 """
     This thread class handles all user inputs and alters a global status variable to alter program flow, ensure all threads
@@ -126,8 +139,6 @@ class captureImage(threading.Thread):
 ui = userInputThread()
 ui.start()
 
-print "Thread Started"
-
 refreshRate = 100
 exposureTime = 20
 
@@ -140,7 +151,11 @@ curThreadCount = 1
 prevCntrlTime = time.time()
 captureStart = False
 
+print "working "
+
 ControlSystemWrapper.set_as_current_position()
+
+print "still working"
 
 control_system = updateControlSystemThread()
 control_system.start()
