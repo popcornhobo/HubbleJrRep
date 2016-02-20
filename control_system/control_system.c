@@ -8,29 +8,19 @@
  * Revions:  
  * 2016-02-11	v0.1	Initial Revison 
  * 2016-02-12	v0.2    Added Quaternion Error Calculation
+ * 2016-02-19	v0.3	Moved includes to .h
+ * 			Moved defines to .c
+ * 			Added set position commands
  * */
 
 #include "control_system.h"
-#include "quaternion_math.h"
-#include "..\\VN_100\\VN_lib.h"
-#include "..\\VN_100\\soft_spi.h"
 
+/* Local Function Prototypes */
+void update_servos(int Pitch, int Yaw, int Roll);
 
-// User defines
-#define True 1
-#define False 0
-
-#define SET_RATE_ADDR_PITCH		0x00000100
-#define SERVO_ERROR_ADDR_PITCH 	0x0000010C
-
-#define SET_RATE_ADDR_ROLL		0x00000180
-#define SERVO_ERROR_ADDR_ROLL 	0x0000018C
-
-#define SET_RATE_ADDR_YAW		0x00000200
-#define SERVO_ERROR_ADDR_YAW 	0x0000020C
-
-// User Global Variables
+/* Global User Variables */
 unsigned char sensorID = 0;
+quaternion reference;
 static int isInitialized = False;
 void* Servo_Set_Pitch;
 void* Servo_Error_Pitch;
@@ -40,7 +30,7 @@ void* Servo_Set_Yaw;
 void* Servo_Error_Yaw;
 
 /* Function Definitions */
-double control_system_update(double q0, double q1, double q2, double q3)
+int control_system_update()
 {
 	/*
 	* Get current position from VN-100
@@ -60,7 +50,7 @@ double control_system_update(double q0, double q1, double q2, double q3)
 
 		VN100_SPI_GetQuatRates(sensorID, q, rates);
 		quaternion qpos = {.q0 = q[0], .q1 = q[1], .q2 = q[2], .q3 = q[3]};
-		quaternion qref = {.q0 = q0, .q1 = q1, .q2 = q2, .q3 = q3};
+		quaternion qref = {.q0 = reference.q0, .q1 = reference.q1, .q2 = reference.q2, .q3 = reference.q3};
 
 		/*
 		*	Normalize position and reference Quaternion before calculating the Quaternion
@@ -132,4 +122,23 @@ int control_system_init()
 void update_servos(int Pitch, int Yaw, int Roll)
 {
 	
+}
+
+void set_as_current_position()
+{
+	// reference = Get_Position_From_VN-100
+	float q[4];
+	float rates[3];
+	VN100_SPI_GetQuatRates(sensorID, q, rates);
+	reference = {.q0 = q[0], .q1 = q[1], .q2 = q[2], .q3 = q[3]};
+}
+
+void rotate_current_position(float yaw, float pitch, float roll)
+{
+
+}
+
+void update_gains( float P, float I, float D)
+{
+
 }
