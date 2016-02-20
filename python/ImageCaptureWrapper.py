@@ -11,7 +11,8 @@
 """
 import ctypes
 
-_cameraInterface = ctypes.CDLL('camera_interface_lib.so')
+_cameraInterface = ctypes.CDLL('ZWO_camera_interface.so')
+
 
 _cameraInterface.ZWO_Setup.restype = ctypes.c_int
 

@@ -12,19 +12,6 @@
  * 			Moved defines to .c
  * 			Added set position commands
  * */
-<<<<<<< Updated upstream
-=======
- 
-#include "control_system.h"
-#include "quaternion_math.h"
-#include "../VN_100/VN_lib.h"
-// User defines
-#define True 1
-#define False 0
-
-#define SET_RATE_ADDR_PITCH		0x00000100
-#define SERVO_ERROR_ADDR_PITCH 	0x0000010C
->>>>>>> Stashed changes
 
 #include "control_system.h"
 
@@ -75,10 +62,14 @@ int control_system_update()
 		qerr = quatMult(qpos, quatConj(qref));
 		// The quaternion error needs to be adjusted to represent the shortest path
 		
+		//printf("Quaternion Error: Q0:%lf   Q1:%lf   Q2:%lf   Q3:%lf\n", qerr.q0, qerr.q1, qerr.q2, qerr.q3);
+		
 		// The three imaginary components now represent the per-axis errors of the system
 		xerr = qerr.q1*qerr.q0;
 		yerr = qerr.q2*qerr.q0;
 		zerr = qerr.q3*qerr.q0;
+		
+		//printf("Error: Xerr:%lf   Yerr:%lf   Zerr:%lf\n", xerr, yerr, zerr);
 
 		/* Apply the gains */
 		xerr *= P;
@@ -135,18 +126,21 @@ int control_system_init()
 	isInitialized = True;
 	return 0;
 }
-
+ 
 
 void set_as_current_position()
 {
 	// reference = Get_Position_From_VN-100
 	float q[4];
 	float rates[3];
-	VN100_SPI_GetQuatRates(sensorID, q, rates);
+	VN100_SPI_Packet * ReturnPacket = VN100_SPI_GetQuatRates(sensorID, q, rates);
+	//printf("Return:%u \n", *(uint8_t*)ReturnPacket);
 	reference.q0 = q[0];
 	reference.q1 = q[1];
 	reference.q2 = q[2];
 	reference.q3 = q[3];
+	
+	//printf("Position from VN100 q0:%f   q1:%f   q2:%f   q3:%f\n", q[0], q[1], q[2], q[3]);
 	
 }
 
@@ -160,6 +154,8 @@ void update_gains( float new_P, float new_I, float new_D)
 	P = new_P;
 	I = new_I;
 	D = new_D;
+	
+	//printf("New Gains P:%f   I:%f   D:%f\n", P, I, D);
 }
 
 
@@ -182,7 +178,7 @@ void update_servos(double Pitch, double Yaw, double Roll)
 	Yaw   *= 1023;
 	Roll  *= 1023;
 	/* Update Pitch */
-	if (Pitch < 0)
+	if (Pitch < 0) 
 	{
 		Pitch = abs(Pitch) + 1024; // 1024 is where negative values start for the motor
 
@@ -210,11 +206,12 @@ void update_servos(double Pitch, double Yaw, double Roll)
 	}
 	else
 	{
-		if(Pitch > 1023)
+		if(Yaw > 1023)
 		{
-			Pitch = 1023;
+			Yaw = 1023;
 		}
 	}
+	
 	/* Update Roll */
 	if (Roll < 0)
 	{
@@ -226,14 +223,17 @@ void update_servos(double Pitch, double Yaw, double Roll)
 	}
 	else
 	{
-		if(Pitch > 1023)
+		if(Roll > 1023)
 		{
-			Pitch = 1023;
+			Roll = 1023;
 		}
 	}
 
 	/* Send the servo commands */	
-	*(unit_32*) Servo_Set_Pitch= floor(Pitch);
-	*(unit_32*) Servo_Set_Yaw= floor(Yaw);
-	*(unit_32*) Servo_Set_Roll= floor(Roll);
+	//*(uint32_t *) Servo_Set_Pitch= floor(Pitch);
+	//*(uint32_t *) Servo_Set_Yaw= floor(Yaw);
+	*(uint32_t *) Servo_Set_Roll= floor(Roll);
+	
+	printf("Servo Rate Value: %u\n", floor(Roll));
+	printf("Servo Rate Register: %u\n\n", (*(uint32_t *) Servo_Set_Roll));
 }
