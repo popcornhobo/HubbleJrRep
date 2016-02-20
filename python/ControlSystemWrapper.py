@@ -16,7 +16,9 @@ def control_system_update():
 
 def set_as_current_position():
 	global _controlSystem
+	print "help me"
 	_controlSystem.set_as_current_position()
+	print "im saved"
 
 def rotate_current_position(yaw, pitch, roll):
 	global _controlSystem
