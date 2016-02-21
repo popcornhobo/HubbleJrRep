@@ -44,7 +44,7 @@ class userInputThread(threading.Thread):
 					with run_status_lock:
 						run_status = "Quit"
 				elif(cmd.group() == "P:"):
-					val = regex_val_int.search(input)
+					val = regex_val_float.search(input)
 					if val:
 						print "P: ", int(val.group(),10)
 						with control_system_lock:
@@ -53,7 +53,7 @@ class userInputThread(threading.Thread):
 					else:
 						print "Invalid Value:"
 				elif(cmd.group() == "I:"):
-					val = regex_val_int.search(input)
+					val = regex_val_float.search(input)
 					if val:
 						print "I: ", int(val.group())
 						with control_system_lock:
@@ -62,7 +62,7 @@ class userInputThread(threading.Thread):
 					else:
 						print "Invalid Value"
 				elif(cmd.group() == "D:"):
-					val = regex_val_int.search(input)
+					val = regex_val_float.search(input)
 					if val:
 						print "D: ", int(val.group())
 						with control_system_lock:
