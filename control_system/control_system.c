@@ -230,13 +230,17 @@ void update_servos(double Pitch, double Yaw, double Roll)
 	}
 
 	/* Send the servo commands */	
-	//*(uint32_t *) Servo_Set_Pitch= floor(Pitch);
-	*(uint32_t *) Servo_Set_Yaw= (int) floor(Yaw);
-	//*(uint32_t *) Servo_Set_Roll= floor(Roll);
+	//*(uint32_t *) Servo_Set_Pitch= (int)floor(Pitch);
+	
+	*(uint32_t *) Servo_Set_Yaw= 1024 + 50;
+	
+	//*(uint32_t *) Servo_Set_Roll= (int)floor(Roll);
 	
 //	printf("Servo Rate Value: %u\n", floor(Yaw));
 	if(counter >= 5){
-		//printf("Servo Rate Register: %u\n\n", (*(uint32_t *) Servo_Set_Yaw));
+		printf("Servo Rate Register Pitch: %u\n\n", (*(uint32_t *) Servo_Set_Pitch));
+		printf("Servo Rate Register Roll: %u\n\n", (*(uint32_t *) Servo_Set_Yaw));
+		printf("Servo Rate Register Yaw: %u\n\n", (*(uint32_t *) Servo_Set_Roll));
 		counter = 0;
 	} else{
 		counter++;
