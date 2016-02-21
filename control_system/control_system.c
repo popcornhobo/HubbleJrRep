@@ -76,10 +76,10 @@ int control_system_update()
 		yerr *= P;
 		zerr *= P;
 		/* Update Servos
-		 * X is pitch
+		 * X is yaw
 		 * Y is roll
-		 * Z is yaw */
-		update_servos(xerr, zerr, yerr);
+		 * Z is pitch */
+		update_servos(zerr, xerr, yerr);
 		/*------------------------------------------------------------------------------*/
 	}
 	else
@@ -163,9 +163,6 @@ void update_gains( float new_P, float new_I, float new_D)
 /* Local Functions */
 
 /* update_servos
- * X is pitch
- * Y is Roll
- * Z is Yaw
 */
 void update_servos(double Pitch, double Yaw, double Roll)
 {
@@ -174,6 +171,9 @@ void update_servos(double Pitch, double Yaw, double Roll)
 	 * then load the value into the servo
 	*/
 	/* Scale Error to match motor */
+	
+	static int counter = 0;
+	
 	Pitch *= 1023;
 	Yaw   *= 1023;
 	Roll  *= 1023;
@@ -231,9 +231,15 @@ void update_servos(double Pitch, double Yaw, double Roll)
 
 	/* Send the servo commands */	
 	//*(uint32_t *) Servo_Set_Pitch= floor(Pitch);
-	//*(uint32_t *) Servo_Set_Yaw= floor(Yaw);
-	*(uint32_t *) Servo_Set_Roll= floor(Roll);
+	*(uint32_t *) Servo_Set_Yaw= (int) floor(Yaw);
+	//*(uint32_t *) Servo_Set_Roll= floor(Roll);
 	
-	printf("Servo Rate Value: %u\n", floor(Roll));
-	printf("Servo Rate Register: %u\n\n", (*(uint32_t *) Servo_Set_Roll));
+//	printf("Servo Rate Value: %u\n", floor(Yaw));
+	if(counter >= 5){
+		//printf("Servo Rate Register: %u\n\n", (*(uint32_t *) Servo_Set_Yaw));
+		counter = 0;
+	} else{
+		counter++;
+	}
+    
 }
