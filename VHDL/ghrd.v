@@ -171,21 +171,21 @@ full2HalfDueplex mux_pitch (
 	.Control(pitch_uart_tx_rx),
 	.Tx(pitch_uart_tx),
 	.Rx(pitch_uart_rx),
-	.Data(GPIO_1[15])
+	.Data(GPIO_1[19])
 );
 
 full2HalfDueplex mux_roll (
 	.Control(roll_uart_tx_rx),
 	.Tx(roll_uart_tx),
 	.Rx(roll_uart_rx),
-	.Data(GPIO_1[13])
+	.Data(GPIO_1[17])
 );
 
 full2HalfDueplex mux_yaw (
 	.Control(yaw_uart_tx_rx),
 	.Tx(yaw_uart_tx),
-	.Rx(yaw_uart_rx),
-	.Data(GPIO_1[14])
+	.Rx(yaw_uart_rx),0
+	.Data(GPIO_1[18])
 );
 
 //assign GPIO_0[7:0] = uart_data_in_int;
