@@ -10,11 +10,13 @@
 -- Tool versions: 
 -- Description: 
 --
--- Dependencies: 
+-- Dependencies: gh libraries and gh_uart_16550 open cores block
 --
 -- Revision: 
--- Revision 0.01 - File Created
---          0.02 - State Machines updated and Full2half duplex added
+-- Revision 0.10 - File Created
+--          0.20 - State Machines updated and Full2half duplex added
+--          0.30 - Functional block completed with lock up error on no returned packet
+--          0.50 - 
 -- Additional Comments: 
 --
 ----------------------------------------------------------------------------------
@@ -47,6 +49,9 @@ architecture packet_former_arch of packet_former is
 									SWR0, SWR_CALC_CHECKSUM, SWR_B1, SWR_B2, SWR_B3,            -- Write the Rotation Rate        
 											SWR_B4, SWR_B5, SWR_B6, SWR_B7, SWR_BUF, SWR_B9,
 											SWR_B8, SWR_B10,
+                                    SWP0, SWP_CALC_CHECKSUM, SWP_B1, SWP_B2, SWP_B3,            -- Write the Rotation Rate        
+                                            SWP_B4, SWP_B5, SWP_B6, SWP_B7, SWP_BUF, SWP_B9,
+                                            SWP_B8, SWP_B10,
 									SRE0, SRE_B1, SRE_B2, SRE_B3, SRE_B4, SRE_B5, SRE_B6, SRE_B7, SRE_B8, SRE_B9, SRE_B10, SRE_B11, SRE_B12, SRE_ERR, SRE_ERR2,                                                           -- Read the returned error packet after a write
 									SIU0, SIU_LCR1, SIU_LCR2, SIU_LCR3, SIU_BS1, SIU_BS2, SIU_BS3, SIU_BS4, SIU_IRQ, SIU_IRQ1, SIU_FIFO, SIU_FIFO1, SIU_FIFO2, SIU_INT);   -- Intialize the UART by setting baud rate registers, the interupt registers, and the FIFO config
 
@@ -64,10 +69,14 @@ architecture packet_former_arch of packet_former is
     signal Ext_Status_Sig: std_logic_vector(31 downto 0);
     signal Tx_sig, Rx_sig : std_logic;
     signal edgeCount : integer := 0;
-	 signal FIFO_byte_count : integer := 0;
-	 signal servo_error_latched : std_logic_vector (31 downto 0);
-	 signal write_error : std_logic;
+	signal FIFO_byte_count : integer := 0;
+	signal servo_error_latched : std_logic_vector (31 downto 0);
+	signal write_error : std_logic;
     signal servo_error_temp : std_logic_vector (31 downto 0);
+    signal timeout  : std_logic;
+    signal timeout_counter  : integer();
+    signal timeout_reset    : std_logic;
+    signal timeout_start    : std_logic;
 	 
     component gh_uart_16550
     port(
@@ -173,24 +182,24 @@ begin
                 readWrite <= '0';
                 addr <= "000";
                 dataIn <= x"1B";
-					 chipSelect <= '1';
-					 -- Clear Write Ready Flag: STATUS(2)
+				chipSelect <= '1';
+				-- Clear Write Ready Flag: STATUS(2)
                 ext_status_sig <= ext_status_sig and x"FFFFFFFA";		-- clear ReadReady and WriteReady
 					 
             when SIU_BS2 =>
-					 addr <= "000";
+                addr <= "000";
                 readWrite <= '1';
-					 dataIn <= x"1B";
-					 chipSelect <= '1';
-					 -- Clear Write Ready Flag: STATUS(2)
+                dataIn <= x"1B";
+                chipSelect <= '1';
+                -- Clear Write Ready Flag: STATUS(2)
                 ext_status_sig <= ext_status_sig and x"FFFFFFFA";		-- clear ReadReady and WriteReady
                 
             when SIU_BS3 =>
                 readWrite <= '0';
                 addr <= "001";    
                 dataIn <= x"00";
-					 chipSelect <= '1';
-					 -- Clear Write Ready Flag: STATUS(2)
+                chipSelect <= '1';
+                -- Clear Write Ready Flag: STATUS(2)
                 ext_status_sig <= ext_status_sig and x"FFFFFFFA";		-- clear ReadReady and WriteReady
 				
             when SIU_BS4 =>
@@ -212,26 +221,26 @@ begin
 					 
             when SIU_LCR3 =>
                 readWrite <= '1';
-					 dataIn <= "00000011";
-					 chipSelect <= '1';
-					 addr <= "011";  
-					 -- Clear Write Ready Flag: STATUS(2)
+                dataIn <= "00000011";
+                chipSelect <= '1';
+                addr <= "011";  
+                -- Clear Write Ready Flag: STATUS(2)
                 ext_status_sig <= ext_status_sig and x"FFFFFFFA";		-- clear ReadReady and WriteReady
                 
             when SIU_IRQ => 
                 readWrite <= '0';
                 addr   <= "001";        
                 dataIn <= x"03";
-					 chipSelect <= '1';
-					 -- Clear Write Ready Flag: STATUS(2)
+                chipSelect <= '1';
+                -- Clear Write Ready Flag: STATUS(2)
                 ext_status_sig <= ext_status_sig and x"FFFFFFFA";		-- clear ReadReady and WriteReady
 					 
             when SIU_IRQ1 =>
                 readWrite <= '1';
-					 dataIn <= x"03";
-					 chipSelect <= '1';
-					 addr   <= "001";
-					 -- Clear Write Ready Flag: STATUS(2)
+                dataIn <= x"03";
+                chipSelect <= '1';
+                addr   <= "001";
+                -- Clear Write Ready Flag: STATUS(2)
                 ext_status_sig <= ext_status_sig and x"FFFFFFFA";		-- clear ReadReady and WriteReady
                 
             -- set FIFO trigger level in FCR register     
@@ -239,24 +248,25 @@ begin
                 readWrite <= '0';
                 addr <= "010";
                 dataIn <= "01000000";
-					 chipSelect <= '1';
-					 -- Clear Write Ready Flag: STATUS(2)
+                chipSelect <= '1';
+                -- Clear Write Ready Flag: STATUS(2)
                 ext_status_sig <= ext_status_sig and x"FFFFFFFA";		-- clear ReadReady and WriteReady
 					 
             when SIU_FIFO1 =>
                 readWrite <= '1';
-					 dataIn <= "01000000";
-					 chipSelect <= '1';
-					 addr <= "010";
-					 -- Clear Write Ready Flag: STATUS(2)
+                dataIn <= "01000000";
+                chipSelect <= '1';
+                addr <= "010";
+                -- Clear Write Ready Flag: STATUS(2)
                 ext_status_sig <= ext_status_sig and x"FFFFFFFA";		-- clear ReadReady and WriteReady
 					 
-				when SIU_FIFO2 =>
-					readWrite <= '0';
-					chipSelect <= '0';
-					-- Clear Write Ready Flag: STATUS(2)
+			when SIU_FIFO2 =>
+                readWrite <= '0';
+                chipSelect <= '0';
+                -- Clear Write Ready Flag: STATUS(2)
                 ext_status_sig <= ext_status_sig and x"FFFFFFFA";		-- clear ReadReady and WriteReady
 					 
+            
             --------------------------------------------------
             -- Write Rate States
             --------------------------------------------------
@@ -267,12 +277,12 @@ begin
                 
              when SWR_CALC_CHECKSUM =>   
                 -- calculate checksum
-					      TxRx_sel <= '1';    -- 1 is tx
+                          TxRx_sel <= '1';    -- 1 is tx
                 -- Checksum = (~(ID + AX_BD_LENGTH + AX_WRITE_DATA + AX_BAUD_RATE + Baud_Rate))&0xFF;
                 calculatedChecksum <= not(std_logic_vector(to_unsigned(( 1 + 5 + 3 + 32 + to_integer(unsigned(data_input(7 downto 0))) + to_integer(unsigned(data_input(15 downto 8)))),8))); -- 4 is MX_BD_Length, 3 is MX_Write_data 
                 -- Clear Write Ready Flag: STATUS(2)
-                ext_status_sig <= ext_status_sig and x"FFFFFFFA";		-- clear ReadReady and WriteReady
-					 
+                ext_status_sig <= ext_status_sig and x"FFFFFFFA";       -- clear ReadReady and WriteReady
+                     
             when SWR_B1 =>
                 -- clock in first byte to the FIFO buffer
                 TxRx_sel <= '1';
@@ -280,110 +290,225 @@ begin
                 addr <= "000"; -- Select the FIFO buffers 
                 readWrite <= '1';
                 chipSelect <= '1';               
-					 -- Clear Write Ready Flag: STATUS(2)
-                ext_status_sig <= ext_status_sig and x"FFFFFFFA";		-- clear ReadReady and WriteReady
-					 
+                     -- Clear Write Ready Flag: STATUS(2)
+                ext_status_sig <= ext_status_sig and x"FFFFFFFA";       -- clear ReadReady and WriteReady
+                     
             when SWR_B2 =>
                  -- clock in second byte to the FIFO buffer
-					 TxRx_sel <= '1';    -- 1 is tx
+                     TxRx_sel <= '1';    -- 1 is tx
                 dataIn <= x"FF";
-					 addr <= "000"; -- Select the FIFO buffers 
+                     addr <= "000"; -- Select the FIFO buffers 
                 readWrite <= '1';
                 chipSelect <= '1';     
-					 -- Clear Write Ready Flag: STATUS(2)
-                ext_status_sig <= ext_status_sig and x"FFFFFFFA";		-- clear ReadReady and WriteReady
-					 
+                     -- Clear Write Ready Flag: STATUS(2)
+                ext_status_sig <= ext_status_sig and x"FFFFFFFA";       -- clear ReadReady and WriteReady
+                     
             when SWR_B3 =>
                 -- Servo ID
-					 TxRx_sel <= '1';    -- 1 is tx
+                     TxRx_sel <= '1';    -- 1 is tx
                 dataIn <= x"01"; --servo_id(7 downto 0);
-					 addr <= "000"; -- Select the FIFO buffers 
+                     addr <= "000"; -- Select the FIFO buffers 
                 readWrite <= '1';
                 chipSelect <= '1';     
-					 -- Clear Write Ready Flag: STATUS(2)
-                ext_status_sig <= ext_status_sig and x"FFFFFFFA";		-- clear ReadReady and WriteReady
+                     -- Clear Write Ready Flag: STATUS(2)
+                ext_status_sig <= ext_status_sig and x"FFFFFFFA";       -- clear ReadReady and WriteReady
     
             when SWR_B4 =>
                 -- Data_length
-					 TxRx_sel <= '1';    -- 1 is tx
+                     TxRx_sel <= '1';    -- 1 is tx
                 dataIn <= x"05"; -- This is the data length
-					 addr <= "000"; -- Select the FIFO buffers 
+                     addr <= "000"; -- Select the FIFO buffers 
                 readWrite <= '1';
                 chipSelect <= '1';     
-					 -- Clear Write Ready Flag: STATUS(2)
-                ext_status_sig <= ext_status_sig and x"FFFFFFFA";		-- clear ReadReady and WriteReady
+                     -- Clear Write Ready Flag: STATUS(2)
+                ext_status_sig <= ext_status_sig and x"FFFFFFFA";       -- clear ReadReady and WriteReady
 
             when SWR_B5 =>
                 -- Write_Data
-					 TxRx_sel <= '1';    -- 1 is tx
+                     TxRx_sel <= '1';    -- 1 is tx
                 dataIn <= x"03"; -- This signifies we are writing data
-					 addr <= "000"; -- Select the FIFO buffers 
+                     addr <= "000"; -- Select the FIFO buffers 
                 readWrite <= '1';
                 chipSelect <= '1';   
-					 -- Clear Write Ready Flag: STATUS(2)
-                ext_status_sig <= ext_status_sig and x"FFFFFFFA";	 	-- clear ReadReady and WriteReady
+                     -- Clear Write Ready Flag: STATUS(2)
+                ext_status_sig <= ext_status_sig and x"FFFFFFFA";       -- clear ReadReady and WriteReady
             
             when SWR_B6 =>
                 -- Send Address
-					 TxRx_sel <= '1';    -- 1 is tx
+                     TxRx_sel <= '1';    -- 1 is tx
                 dataIn <= x"20"; --std_logic_vector(calculatedBaudByte)(7 downto 0);
-					 addr <= "000"; -- Select the FIFO buffers 
+                     addr <= "000"; -- Select the FIFO buffers 
                 readWrite <= '1';
                 chipSelect <= '1';   
-					 -- Clear Write Ready Flag: STATUS(2)
-                ext_status_sig <= ext_status_sig and x"FFFFFFFA";	 		-- clear ReadReady and WriteReady
+                     -- Clear Write Ready Flag: STATUS(2)
+                ext_status_sig <= ext_status_sig and x"FFFFFFFA";           -- clear ReadReady and WriteReady
             
             when SWR_B7 =>
                 -- Send 1st byte
-					 TxRx_sel <= '1';    -- 1 is tx
+                     TxRx_sel <= '1';    -- 1 is tx
                 dataIn <= data_input(7 downto 0);
-					 addr <= "000"; -- Select the FIFO buffers 
+                     addr <= "000"; -- Select the FIFO buffers 
                 readWrite <= '1';
                 chipSelect <= '1';    
-					 -- Clear Write Ready Flag: STATUS(2)
-                ext_status_sig <= ext_status_sig and x"FFFFFFFA"; 		-- clear ReadReady and WriteReady
+                     -- Clear Write Ready Flag: STATUS(2)
+                ext_status_sig <= ext_status_sig and x"FFFFFFFA";       -- clear ReadReady and WriteReady
                 
-				when SWR_B8 =>
-					 -- Send 2nd byte
-					 TxRx_sel <= '1';    -- 1 is tx
+                when SWR_B8 =>
+                     -- Send 2nd byte
+                     TxRx_sel <= '1';    -- 1 is tx
                 dataIn <= data_input(15 downto 8);
-					 addr <= "000"; -- Select the FIFO buffers 
+                     addr <= "000"; -- Select the FIFO buffers 
                 readWrite <= '1';
                 chipSelect <= '1';    
-					 -- Clear Write Ready Flag: STATUS(2)
-                ext_status_sig <= ext_status_sig and x"FFFFFFFA"; 		-- clear ReadReady and WriteReady
-					 
-				when SWR_B9 =>
-					 -- Send Checksum byte
-					 TxRx_sel <= '1';    -- 1 is tx
+                     -- Clear Write Ready Flag: STATUS(2)
+                ext_status_sig <= ext_status_sig and x"FFFFFFFA";       -- clear ReadReady and WriteReady
+                     
+                when SWR_B9 =>
+                     -- Send Checksum byte
+                     TxRx_sel <= '1';    -- 1 is tx
                 dataIn <= calculatedChecksum;
-					 addr <= "000"; -- Select the FIFO buffers 
+                     addr <= "000"; -- Select the FIFO buffers 
                 readWrite <= '1';
                 chipSelect <= '1';    
-					 -- Clear Write Ready Flag: STATUS(2)
-                ext_status_sig <= ext_status_sig and x"FFFFFFFA"; 		-- clear ReadReady and WriteReady
-					 
+                     -- Clear Write Ready Flag: STATUS(2)
+                ext_status_sig <= ext_status_sig and x"FFFFFFFA";       -- clear ReadReady and WriteReady
+                     
             when SWR_B10 =>
                 -- stop writing
-					 TxRx_sel <= '1';    -- 1 is tx
+                TxRx_sel <= '1';    -- 1 is tx
                 readWrite <= '0';
                 chipSelect <= '0';
-					 addr <= "000"; -- Select the FIFO buffers 
-					 -- Clear Write Ready Flag: STATUS(2)
-                ext_status_sig <= ext_status_sig and x"FFFFFFFA";		-- clear ReadReady and WriteReady
+                addr <= "000"; -- Select the FIFO buffers 
+                -- Clear Write Ready Flag: STATUS(2)
+                ext_status_sig <= ext_status_sig and x"FFFFFFFA";       -- clear ReadReady and WriteReady
 					 
+            --------------------------------------------------
+            -- Write Position States
+            --------------------------------------------------
+            when SWP0 =>
+                TxRx_sel <= '1';    -- 1 is tx
+                -- Clear Write Ready Flag: STATUS(2)
+                ext_status_sig <= ext_status_sig and x"FFFFFFFA"; -- clear ReadReady and WriteReady
+                
+             when SWP_CALC_CHECKSUM =>   
+                -- calculate checksum
+                          TxRx_sel <= '1';    -- 1 is tx
+                -- Checksum = (~(ID + AX_BD_LENGTH + AX_WRITE_DATA + AX_BAUD_RATE + Baud_Rate))&0xFF;
+                calculatedChecksum <= not(std_logic_vector(to_unsigned(( 1 + 5 + 3 + 32 + to_integer(unsigned(data_input(7 downto 0))) + to_integer(unsigned(data_input(15 downto 8)))),8))); -- 4 is MX_BD_Length, 3 is MX_Write_data 
+                -- Clear Write Ready Flag: STATUS(2)
+                ext_status_sig <= ext_status_sig and x"FFFFFFFA";       -- clear ReadReady and WriteReady
+                     
+            when SWP_B1 =>
+                -- clock in first byte to the FIFO buffer
+                TxRx_sel <= '1';
+                dataIn <= x"FF";
+                addr <= "000"; -- Select the FIFO buffers 
+                readWrite <= '1';
+                chipSelect <= '1';               
+                     -- Clear Write Ready Flag: STATUS(2)
+                ext_status_sig <= ext_status_sig and x"FFFFFFFA";       -- clear ReadReady and WriteReady
+                     
+            when SWP_B2 =>
+                 -- clock in second byte to the FIFO buffer
+                     TxRx_sel <= '1';    -- 1 is tx
+                dataIn <= x"FF";
+                     addr <= "000"; -- Select the FIFO buffers 
+                readWrite <= '1';
+                chipSelect <= '1';     
+                     -- Clear Write Ready Flag: STATUS(2)
+                ext_status_sig <= ext_status_sig and x"FFFFFFFA";       -- clear ReadReady and WriteReady
+                     
+            when SWP_B3 =>
+                -- Servo ID
+                     TxRx_sel <= '1';    -- 1 is tx
+                dataIn <= x"01"; --servo_id(7 downto 0);
+                     addr <= "000"; -- Select the FIFO buffers 
+                readWrite <= '1';
+                chipSelect <= '1';     
+                     -- Clear Write Ready Flag: STATUS(2)
+                ext_status_sig <= ext_status_sig and x"FFFFFFFA";       -- clear ReadReady and WriteReady
+    
+            when SWP_B4 =>
+                -- Data_length
+                     TxRx_sel <= '1';    -- 1 is tx
+                dataIn <= x"05"; -- This is the data length
+                     addr <= "000"; -- Select the FIFO buffers 
+                readWrite <= '1';
+                chipSelect <= '1';     
+                     -- Clear Write Ready Flag: STATUS(2)
+                ext_status_sig <= ext_status_sig and x"FFFFFFFA";       -- clear ReadReady and WriteReady
+
+            when SWP_B5 =>
+                -- Write_Data
+                     TxRx_sel <= '1';    -- 1 is tx
+                dataIn <= x"03"; -- This signifies we are writing data
+                     addr <= "000"; -- Select the FIFO buffers 
+                readWrite <= '1';
+                chipSelect <= '1';   
+                     -- Clear Write Ready Flag: STATUS(2)
+                ext_status_sig <= ext_status_sig and x"FFFFFFFA";       -- clear ReadReady and WriteReady
+            
+            when SWP_B6 =>
+                -- Send Address
+                     TxRx_sel <= '1';    -- 1 is tx
+                dataIn <= x"20"; --std_logic_vector(calculatedBaudByte)(7 downto 0);
+                     addr <= "000"; -- Select the FIFO buffers 
+                readWrite <= '1';
+                chipSelect <= '1';   
+                     -- Clear Write Ready Flag: STATUS(2)
+                ext_status_sig <= ext_status_sig and x"FFFFFFFA";           -- clear ReadReady and WriteReady
+            
+            when SWP_B7 =>
+                -- Send 1st byte
+                     TxRx_sel <= '1';    -- 1 is tx
+                dataIn <= data_input(7 downto 0);
+                     addr <= "000"; -- Select the FIFO buffers 
+                readWrite <= '1';
+                chipSelect <= '1';    
+                     -- Clear Write Ready Flag: STATUS(2)
+                ext_status_sig <= ext_status_sig and x"FFFFFFFA";       -- clear ReadReady and WriteReady
+                
+                when SWP_B8 =>
+                     -- Send 2nd byte
+                     TxRx_sel <= '1';    -- 1 is tx
+                dataIn <= data_input(15 downto 8);
+                     addr <= "000"; -- Select the FIFO buffers 
+                readWrite <= '1';
+                chipSelect <= '1';    
+                     -- Clear Write Ready Flag: STATUS(2)
+                ext_status_sig <= ext_status_sig and x"FFFFFFFA";       -- clear ReadReady and WriteReady
+                     
+                when SWP_B9 =>
+                     -- Send Checksum byte
+                     TxRx_sel <= '1';    -- 1 is tx
+                dataIn <= calculatedChecksum;
+                     addr <= "000"; -- Select the FIFO buffers 
+                readWrite <= '1';
+                chipSelect <= '1';    
+                     -- Clear Write Ready Flag: STATUS(2)
+                ext_status_sig <= ext_status_sig and x"FFFFFFFA";       -- clear ReadReady and WriteReady
+                     
+            when SWP_B10 =>
+                -- stop writing
+                     TxRx_sel <= '1';    -- 1 is tx
+                readWrite <= '0';
+                chipSelect <= '0';
+                     addr <= "000"; -- Select the FIFO buffers 
+                     -- Clear Write Ready Flag: STATUS(2)
+                ext_status_sig <= ext_status_sig and x"FFFFFFFA";       -- clear ReadReady and WriteReady
+
 				----------------------------------------------------------------------
 				-- Read Servo Returned Error
 				----------------------------------------------------------------------
 					 
 				when SRE0 =>		-- RESET the RX FIFO and FIFO byte count
-				  TxRx_sel <= '0';
-				  addr <= "000";									
+				    TxRx_sel <= '0';
+				    addr <= "000";									
 					readWrite <= '0';
 					chipSelect <= '0';
 					write_error <= '0';
-                -- Clear Read Ready Flag: STATUS(1)
-          ext_status_sig <= ext_status_sig and x"FFFFFFFA"; 		-- clear ReadReady and WriteReady
+                    -- Clear Read Ready Flag: STATUS(1)
+                    ext_status_sig <= ext_status_sig and x"FFFFFFFA"; 		-- clear ReadReady and WriteReady
 
 				when SRE_B1 =>		-- RESET the RX FIFO
 				  addr <= "000";
@@ -391,16 +516,16 @@ begin
 					readWrite <= '0';
 					chipSelect <= '1';
 					write_error <= '0';
-                -- Clear Read Ready Flag: STATUS(1)
+                    -- Clear Read Ready Flag: STATUS(1)
 					ext_status_sig <= ext_status_sig and x"FFFFFFFA"; 		-- clear ReadReady and WriteReady
 					
 				when SRE_B2 => 
-				  addr <= "000"; 
-				  TxRx_sel <= '0';
+				    addr <= "000"; 
+				    TxRx_sel <= '0';
 					readWrite <= '0';
 					chipSelect <= '0';
 					write_error <= '0';
-                -- Clear Read Ready Flag: STATUS(1)
+                    -- Clear Read Ready Flag: STATUS(1)
 					ext_status_sig <= ext_status_sig and x"FFFFFFFA"; 		-- clear ReadReady and WriteReady
 					
 				when SRE_B3 =>		-- potentially add a timeout to reduce risk of infinite loop ???
@@ -409,42 +534,42 @@ begin
 					readWrite <= '0';
 					chipSelect <= '1';
 					write_error <= '0';
-                -- Set Read Ready Flag: STATUS(1)
-          ext_status_sig <= ext_status_sig and x"FFFFFFFA"; 		-- clear ReadReady and WriteReady
+                    -- Clear Read Ready Flag: STATUS(1)
+                    ext_status_sig <= ext_status_sig and x"FFFFFFFA"; 		-- clear ReadReady and WriteReady
                	 
 				when SRE_B4 =>
 					addr <= "000"; 
-				  TxRx_sel <= '0';
+				    TxRx_sel <= '0';
 					readWrite <= '0';
 					chipSelect <= '0';
 					write_error <= '0';
-                -- Clear Read Ready Flag: STATUS(1)
+                    -- Clear Read Ready Flag: STATUS(1)
 					ext_status_sig <= ext_status_sig and x"FFFFFFFA"; 		-- clear ReadReady and WriteReady
                
 				when SRE_B5 =>		-- RESET the RX FIFO and FIFO byte count
-				  TxRx_sel <= '0';
-				  addr <= "000";									
+				    TxRx_sel <= '0';
+				    addr <= "000";									
 					readWrite <= '0';
 					chipSelect <= '1';
 					write_error <= '0';
-                -- Clear Read Ready Flag: STATUS(1)
-          ext_status_sig <= ext_status_sig and x"FFFFFFFA"; 		-- clear ReadReady and WriteReady
+                    -- Clear Read Ready Flag: STATUS(1)
+                    ext_status_sig <= ext_status_sig and x"FFFFFFFA"; 		-- clear ReadReady and WriteReady
 
 				when SRE_B6 =>		-- RESET the RX FIFO
-				  addr <= "000";
-				  TxRx_sel <= '0';
+    				addr <= "000";
+    				TxRx_sel <= '0';
 					readWrite <= '0';
 					chipSelect <= '0';
 					write_error <= '0';
-                -- Clear Read Ready Flag: STATUS(1)
+                    -- Clear Read Ready Flag: STATUS(1)
 					ext_status_sig <= ext_status_sig and x"FFFFFFFA"; 		-- clear ReadReady and WriteReady
 					
 				when SRE_B7 => 
-				  addr <= "000"; 
-				  TxRx_sel <= '0';
+				    addr <= "000"; 
+				    TxRx_sel <= '0';
 					readWrite <= '0';
 					chipSelect <= '1';
-                -- Clear Read Ready Flag: STATUS(1)
+                    -- Clear Read Ready Flag: STATUS(1)
 					ext_status_sig <= ext_status_sig and x"FFFFFFFA"; 		-- clear ReadReady and WriteReady
 					
 				when SRE_B8 =>		-- potentially add a timeout to reduce risk of infinite loop ???
@@ -453,34 +578,34 @@ begin
 					readWrite <= '0';
 					chipSelect <= '0';
 					write_error <= '0';
-                -- Set Read Ready Flag: STATUS(1)
-          ext_status_sig <= ext_status_sig and x"FFFFFFFA"; 		-- clear ReadReady and WriteReady
+                    -- Clear Read Ready Flag: STATUS(1)
+                    ext_status_sig <= ext_status_sig and x"FFFFFFFA"; 		-- clear ReadReady and WriteReady
 			 
-			 when SRE_B9 => 
-				  addr <= "000"; 
-				  TxRx_sel <= '0';
-					readWrite <= '0';
-					chipSelect <= '1';
-                -- Clear Read Ready Flag: STATUS(1)
-					ext_status_sig <= ext_status_sig and x"FFFFFFFA"; 		-- clear ReadReady and WriteReady
-					
+    			 when SRE_B9 => 
+    				addr <= "000"; 
+    				TxRx_sel <= '0';
+    				readWrite <= '0';
+    				chipSelect <= '1';
+                    -- Clear Read Ready Flag: STATUS(1)
+    				ext_status_sig <= ext_status_sig and x"FFFFFFFA"; 		-- clear ReadReady and WriteReady
+    					
 				when SRE_B10 =>		-- potentially add a timeout to reduce risk of infinite loop ???
 					addr <= "000";
 					TxRx_sel <= '0';    -- 0 is rx
 					readWrite <= '0';
 					chipSelect <= '0';
 					write_error <= '0';
-                -- Set Read Ready Flag: STATUS(1)
-          ext_status_sig <= ext_status_sig and x"FFFFFFFA"; 		-- clear ReadReady and WriteReady
+                    -- Clear Read Ready Flag: STATUS(1)
+                    ext_status_sig <= ext_status_sig and x"FFFFFFFA"; 		-- clear ReadReady and WriteReady
 			 
 				when SRE_B11 =>
 					addr <= "000"; 
-				  TxRx_sel <= '0';
+				    TxRx_sel <= '0';
 					readWrite <= '0';
 					chipSelect <= '1';
 					servo_error_temp <= x"000000" & dataOut;
 					write_error <= '0';
-                -- Clear Read Ready Flag: STATUS(1)
+                    -- Clear Read Ready Flag: STATUS(1)
 					ext_status_sig <= ext_status_sig and x"FFFFFFFA"; 		-- clear ReadReady and WriteReady
 					
 					
@@ -490,8 +615,8 @@ begin
 					readWrite <= '0';
 					chipSelect <= '0';
 					write_error <= '1';
-                -- Set Read Ready Flag: STATUS(1)
-          ext_status_sig <= ext_status_sig and x"FFFFFFFA"; 		-- clear ReadReady and WriteReady
+                    -- Set Read Ready Flag: STATUS(1)
+                    ext_status_sig <= ext_status_sig and x"FFFFFFFA"; 		-- clear ReadReady and WriteReady
 			 
 			 when SRE_ERR2 =>
 					addr <= "000";
@@ -499,16 +624,16 @@ begin
 					readWrite <= '0';
 					chipSelect <= '0';
 					write_error <= '0';
-                -- Set Read Ready Flag: STATUS(1)
-          ext_status_sig <= ext_status_sig and x"FFFFFFFA"; 		-- clear ReadReady and WriteReady
+                    -- Set Read Ready Flag: STATUS(1)
+                    ext_status_sig <= ext_status_sig and x"FFFFFFFA"; 		-- clear ReadReady and WriteReady
                	 
 					
-				when SRE_B12 =>
-					TxRx_sel <= '0';    -- 0 is rx
-					chipSelect <= '1';
-					write_error <= '0';
+            when SRE_B12 =>
+                TxRx_sel <= '0';    -- 0 is rx
+                chipSelect <= '1';
+                write_error <= '0';
                 -- Clear Read Ready Flag: STATUS(1)
-          ext_status_sig <= ext_status_sig and x"00000004"; 		-- Set ReadReady 
+                ext_status_sig <= ext_status_sig and x"00000004"; 		-- Set ReadReady 
           
         when others =>
                -- Report State Machine error.... or dont
@@ -570,7 +695,7 @@ begin
 					next_state <= S0;
 				
             --------------------------------------------------
-            -- Write Turn Rate States
+            -- Write Rate States
             --------------------------------------------------
             when SWR0 =>
                 -- check if Uart is ready
@@ -607,12 +732,59 @@ begin
 					next_state <= SWR_B10;
 					
 					
-				when SWR_B10 =>
-					if Tdma = '1' then
-					  next_state <= SWR_B10;
-					else
-					  next_state <= SRE0;
-					end if;
+			when SWR_B10 =>
+				if Tdma = '1' and timeout = '0' then
+				    next_state <= SWR_B10;
+				elsif Tdma = '0' and timeout = '0' then
+				    next_state <= SRE0;
+                else 
+                    next_state <= S0;
+				end if;
+
+            --------------------------------------------------
+            -- Write Position States
+            --------------------------------------------------
+            when SWP0 =>
+                -- check if Uart is ready
+                     next_state <= SWP_CALC_CHECKSUM;
+                     
+            when SWP_CALC_CHECKSUM =>
+                    next_state <= SWP_B1;
+                    
+            when SWP_B1 =>
+                    next_state <= SWP_B2;
+                    
+            when SWP_B2 =>
+                    next_state <= SWP_B3;
+                    
+            when SWP_B3 =>
+                    next_state <= SWP_B4;
+                    
+            when SWP_B4 =>
+                    next_state <= SWP_B5;
+                    
+            when SWP_B5 =>
+                    next_state <= SWP_B6;
+                    
+            when SWP_B6 =>
+                    next_state <= SWP_B7;
+                    
+            when SWP_B7 =>
+                    next_state <= SWP_B8;
+                    
+            when SWP_B8 =>
+                    next_state <= SWP_B9;
+                    
+            when SWP_B9 =>
+                    next_state <= SWP_B10;
+                    
+                    
+            when SWP_B10 =>
+                if Tdma = '1' and timeout  = '0' then
+                  next_state <= SWP_B10;
+                else
+                  next_state <= SRE0;
+                end if;
 					
 					
 				----------------------------------------------------------------------
@@ -731,14 +903,30 @@ begin
 
 	STORE_ERROR: process(clk, reset)
 	begin
-		if(reset = '0') then
-        Servo_error_latched <= x"FFFFFFFF";
-      elsif(rising_edge(clk) and reset = '1') then
-        if(write_error = '1') then
+        if(reset = '0') then
+            Servo_error_latched <= x"FFFFFFFF";
+        elsif(rising_edge(clk) and reset = '1') then
+            if(write_error = '1') then
 				Servo_error_latched <= Servo_error_temp;
-		  end if;
-      end if;
+            end if;
+        end if;
 	end process;
+
+    TIMEOUT_TIMER: process(clk, reset, timeout_reset, timeout_start)
+    begin
+        if(reset = '0' and timeout_reset = '0') then
+            timeout_counter = 0;
+            timeout = '0';
+        elsif (rising_edge(clk) and timeout_start = '1' then
+            if timeout_counter >= 400000 then           -- @50mhz this is 0.008 seconds, the dynamixel servos usually respond in around 0.001 seconds
+                timeout_counter = 0;
+                timeout = '1';
+            else 
+                timeout = '0';
+                timeout_counter = timeout_counter + 1;
+            end if;
+        end if;
+    end process;
 	
 	servo_error <= Servo_error_latched;
 end packet_former_arch;
