@@ -1,23 +1,26 @@
 ----------------------------------------------------------------------------------
 -- Company:          Montana State University
--- Author/Engineer:  Seth Kreitinger
+-- Author/Engineer:  Seth Kreitinger, Zach Frazee, Tom Rader
 -- 
 -- Create Date:    4:50:00 12/12/2015 
 -- Design Name: 
 -- Module Name: DynamixelPacketFormer
--- Project Name: 
--- Target Devices: DE2 board
+-- Project Name: HubbleJr
+-- Target Devices: DE0-CycloneV-SOC board
 -- Tool versions: 
 -- Description: 
 --
--- Dependencies: 
+-- Dependencies: PacketFormer.vhd
 --
 -- Revision: 
--- Revision 0.01 - File Created
---          0.02 - Packet Former Update Processes
+-- Revision 0.10 - File Created
+--          0.30 - State Machines updated and Full2half duplex added
+--          0.50 - Functional block completed with lock up error on no returned packet
+--          0.60 - Alot of Minor Fixes, Excess Signals from prev rev removed
+--          0.80 - Added StateMachine Timeout to Prevent Lockup and Set Position States
 -- Additional Comments: 
+--      For Additional Information see the ReadMe from git repository https://github.com/popcornhobo/HubbleJrRep.git
 --
--- INITIALIZE THE STATE MACHINE!!!!!!!!
 ----------------------------------------------------------------------------------
 
 library IEEE;
@@ -33,11 +36,11 @@ entity dynamixel_wrapper is
         avs_s1_write            : in std_logic;
         avs_s1_address          : in std_logic_vector(4 downto 0);
         avs_s1_writedata        : in std_logic_vector(31 downto 0);
-        avs_s1_read             : in std_LOGIC;
+        avs_s1_read             : in std_logic;
         avs_s1_readdata         : out std_logic_vector(31 downto 0);
         Tx_out                  : out std_logic;
         Rx_out                  : in std_logic;
-		  TxRx_sig					  : out std_LOGIC
+		TxRx_sig			    : out std_logic
     );
 end entity;
 
@@ -47,34 +50,41 @@ component packet_former
     port 
     (
         clk             : in std_logic;
-        reset           : in std_logic;
+        reset_in        : in std_logic;
         data_input      : in std_logic_vector(31 downto 0);
-        data_output     : out std_logic_vector(7 downto 0);
         ext_status      : out std_logic_vector(31 downto 0);
         servo_error     : out std_logic_vector(31 downto 0);
-        read_write      : in std_logic;
+        reg_id          : in std_logic_vector(3 downto 0);
         Tx              : out std_logic;
         Rx              : in std_logic;
         TxRx_sel        : out std_logic
     );
 end component;
 
-
+-- Read enable and write enable Avalon signals
 signal wre : std_logic;
 signal re : std_logic;
+-- Avalon requested address
 signal addr : std_logic_vector(4 downto 0);
 
-
+-- Register storage signals
+signal Set_Pos      : std_logic_vector(31 downto 0);
 signal Set_rate     : std_logic_vector(31 downto 0);
 signal Servo_error  : std_logic_vector(31 downto 0);
 
-signal Status_input : std_logic_vector(31 downto 0);
+-- Packet former status byte
 signal Status_output: std_logic_vector(31 downto 0);
 
-signal data_in_sig : std_logic_vector(31 downto 0);
-signal data_out_sig: std_logic_vector(7 downto 0);
+-- The user supplied data from the Avalon Bus
+signal data_in_sig: std_logic_vector(7 downto 0);
 
-signal read_write : std_LOGIC;
+-- reg_id is used to determine which register was written to. It is one hot encoded.
+-- 0001 is SetRate
+-- 0010 is SetPos
+-- 0100 is BlockReset
+signal reg_id : std_logic_vector(3 downto 0);
+
+-- Tx and Rx signal from top-level entity
 signal Tx_sig : std_logic;
 signal Rx_sig : std_logic;
 
@@ -87,16 +97,15 @@ addr <= avs_s1_address;
 Tx_out <= Tx_sig;
 Rx_sig <= Rx_out;
 
-SERVO_CONTROLLER: packet_former
+    SERVO_CONTROLLER: packet_former
     port map
     (
         clk             => clk,
         reset           => reset_n,
-        data_input      => Set_rate,
-        data_output     => data_out_sig,
+        data_input      => data_in_sig,
         ext_status      => Status_output,
         servo_error     => Servo_error,
-        read_write      => read_write,
+        reg_id          => reg_id,
         Tx              => Tx_sig,
         Rx              => Rx_sig,
         TxRx_sel        => TxRx_sig
@@ -105,15 +114,19 @@ SERVO_CONTROLLER: packet_former
 	 ---------------------------------------------------
 	-- Latch Rate word (address 0)
 	---------------------------------------------------
-	process (clk)
+	REGISTER_WRITE:process (clk)
 	begin
-		if rising_edge(clk) then
-			if wre='1' and addr="00000" then 
-				Set_rate <= avs_s1_writedata(31 downto 0);
-				read_write <= '1';
-			else
-				read_write <='0';
-			end if;
+		if rising_edge(clk) and wre = '1' then
+            case addr is
+                when "00000" =>
+                    data_in_sig <= avs_s1_writedata(31 downto 0);
+                    reg_id <= "0001";
+                when "00100"
+                    data_in_sig <= avs_s1_writedata(31 downto 0);
+                    reg_id <= "0010";
+                when "00101"
+                    reg_id <= "0100";
+            end case;
 		end if;
 	end process;
 	 
@@ -129,10 +142,14 @@ SERVO_CONTROLLER: packet_former
                     avs_s1_readdata <= Status_output;
                 when "00011" =>
                     avs_s1_readdata <= Servo_Error;
+                when "00100" =>
+                    avs_s1_readdata <= Set_Pos;
+                when "00101" =>
+                    avs_s1_readdata <= Block_Reset;
                 when others =>
                     
             end case;
-    end if;
+        end if;
     end process;
 	 
 end dynamixel_wrapper_arch;
