@@ -40,7 +40,7 @@ entity dynamixel_wrapper is
         avs_s1_readdata         : out std_logic_vector(31 downto 0);
         Tx_out                  : out std_logic;
         Rx_out                  : in std_logic;
-		TxRx_sig			    : out std_logic
+		  TxRx_sig			    : out std_logic
     );
 end entity;
 
@@ -71,12 +71,13 @@ signal addr : std_logic_vector(4 downto 0);
 signal Set_Pos      : std_logic_vector(31 downto 0);
 signal Set_rate     : std_logic_vector(31 downto 0);
 signal Servo_error  : std_logic_vector(31 downto 0);
+signal Block_Reset  : std_logic_vector(31 downto 0);
 
 -- Packet former status byte
 signal Status_output: std_logic_vector(31 downto 0);
 
 -- The user supplied data from the Avalon Bus
-signal data_in_sig: std_logic_vector(7 downto 0);
+signal data_in_sig: std_logic_vector(31 downto 0);
 
 -- reg_id is used to determine which register was written to. It is one hot encoded.
 -- 0001 is SetRate
@@ -101,7 +102,7 @@ Rx_sig <= Rx_out;
     port map
     (
         clk             => clk,
-        reset           => reset_n,
+        reset_in        => reset_n,
         data_input      => data_in_sig,
         ext_status      => Status_output,
         servo_error     => Servo_error,
@@ -121,11 +122,13 @@ Rx_sig <= Rx_out;
                 when "00000" =>
                     data_in_sig <= avs_s1_writedata(31 downto 0);
                     reg_id <= "0001";
-                when "00100"
+                when "00100" =>
                     data_in_sig <= avs_s1_writedata(31 downto 0);
                     reg_id <= "0010";
-                when "00101"
+                when "00101" =>
                     reg_id <= "0100";
+					 when others =>
+							
             end case;
 		end if;
 	end process;
@@ -137,14 +140,12 @@ Rx_sig <= Rx_out;
                 when "00000" =>
                     avs_s1_readdata <= Set_rate;
                 when "00001" =>
-                    avs_s1_readdata <= x"000000" & data_out_sig;
-                when "00010" =>
                     avs_s1_readdata <= Status_output;
-                when "00011" =>
+                when "00010" =>
                     avs_s1_readdata <= Servo_Error;
-                when "00100" =>
+                when "00011" =>
                     avs_s1_readdata <= Set_Pos;
-                when "00101" =>
+                when "00100" =>
                     avs_s1_readdata <= Block_Reset;
                 when others =>
                     

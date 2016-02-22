@@ -34,7 +34,7 @@ entity packet_former is
         data_input      : in std_logic_vector(31 downto 0);
         ext_status      : out std_logic_vector(31 downto 0);
         servo_error     : out std_logic_vector(31 downto 0);
-        reg_id          : in std_logic;
+        reg_id          : in std_logic_vector(3 downto 0);
         Tx              : out std_logic;
         Rx              : in std_logic;
         TxRx_sel        : out std_logic
@@ -68,7 +68,7 @@ architecture packet_former_arch of packet_former is
     -- These are the bulk interface signals for the Uart block most of which are unused
     signal usrOut1, usrOut2, clrSend, dataRdy, dataCarrierDetect, dataTermReady, requestSend, IRQ, baudClk, ringIndicator : std_logic;
     -- Both Transmit and Read Ready signals from the Uart block
-    signal Tdma, Rdma std_logic;
+    signal Tdma, Rdma : std_logic;
     -- Variable to hold the Buad rate for the Uart Block
     signal calculatedBaudByte : unsigned(31 downto 0);
     -- Variable to hold the checksum of each packet
@@ -127,9 +127,8 @@ architecture packet_former_arch of packet_former is
 	signal n_reset: std_logic;
 	
 begin
-    reset <= reset_in & red_id(2)
-
-	n_reset <= not (reset); 
+   reset <= reset_in and not(reg_id(2));
+	n_reset <= not(reset); 
 
     ext_status <= Ext_Status_Sig; -- ??? This should be okay?
 	 
@@ -171,8 +170,8 @@ begin
             readWrite <= '0';
 			chipSelect <= '1';
 			write_error <= '0';
-            timeout_start = '0'; 
-            timeout_reset = '1';
+            timeout_start <= '0'; 
+            timeout_reset <= '1';
 				
             -- Set Write Ready Flag: STATUS(2)
             ext_Status_Sig <= ext_Status_Sig or x"00000004";		-- set the WriteReady Flag leave other flags alone
@@ -308,8 +307,8 @@ begin
                 addr <= "000"; -- Select the FIFO buffers 
                 readWrite <= '1';
                 chipSelect <= '1';   
-                timeout_start = '0'; 
-                timeout_reset = '0';           
+                timeout_start <= '0'; 
+                timeout_reset <= '0';           
                      
                 ext_status_sig <= ext_status_sig and x"FFFFFFFA";       -- clear ReadReady and WriteReady
                      
@@ -320,8 +319,8 @@ begin
                 addr <= "000"; -- Select the FIFO buffers 
                 readWrite <= '1';
                 chipSelect <= '1';
-                timeout_start = '0'; 
-                timeout_reset = '0';     
+                timeout_start <= '0'; 
+                timeout_reset <= '0';     
                      
                 ext_status_sig <= ext_status_sig and x"FFFFFFFA";      -- clear ReadReady and WriteReady
                      
@@ -332,8 +331,8 @@ begin
                 addr <= "000"; -- Select the FIFO buffers 
                 readWrite <= '1';
                 chipSelect <= '1';
-                timeout_start = '0'; 
-                timeout_reset = '1';     
+                timeout_start <= '0'; 
+                timeout_reset <= '0';     
                      
                 ext_status_sig <= ext_status_sig and x"FFFFFFFA";       -- clear ReadReady and WriteReady
     
@@ -344,8 +343,8 @@ begin
                 addr <= "000"; -- Select the FIFO buffers 
                 readWrite <= '1';
                 chipSelect <= '1';
-                timeout_start = '0'; 
-                timeout_reset = '1';     
+                timeout_start <= '0'; 
+                timeout_reset <= '0';     
                      
                 ext_status_sig <= ext_status_sig and x"FFFFFFFA";       -- clear ReadReady and WriteReady
 
@@ -356,8 +355,8 @@ begin
                 addr <= "000"; -- Select the FIFO buffers 
                 readWrite <= '1';
                 chipSelect <= '1';
-                timeout_start = '0'; 
-                timeout_reset = '1';   
+                timeout_start <= '0'; 
+                timeout_reset <= '0';   
                      
                 ext_status_sig <= ext_status_sig and x"FFFFFFFA";       -- clear ReadReady and WriteReady
             
@@ -368,8 +367,8 @@ begin
                 addr <= "000"; -- Select the FIFO buffers 
                 readWrite <= '1';
                 chipSelect <= '1';
-                timeout_start = '0'; 
-                timeout_reset = '1';   
+                timeout_start <= '0'; 
+                timeout_reset <= '0';   
                      
                 ext_status_sig <= ext_status_sig and x"FFFFFFFA";           -- clear ReadReady and WriteReady
             
@@ -380,8 +379,8 @@ begin
                 addr <= "000"; -- Select the FIFO buffers 
                 readWrite <= '1';
                 chipSelect <= '1';
-                timeout_start = '0'; 
-                timeout_reset = '1';    
+                timeout_start <= '0'; 
+                timeout_reset <= '0';    
                      
                 ext_status_sig <= ext_status_sig and x"FFFFFFFA";       -- clear ReadReady and WriteReady
                 
@@ -392,8 +391,8 @@ begin
                 addr <= "000"; -- Select the FIFO buffers 
                 readWrite <= '1';
                 chipSelect <= '1';
-                timeout_start = '0'; 
-                timeout_reset = '1';    
+                timeout_start <= '0'; 
+                timeout_reset <= '0';    
                      
                 ext_status_sig <= ext_status_sig and x"FFFFFFFA";       -- clear ReadReady and WriteReady
                      
@@ -404,8 +403,8 @@ begin
                 addr <= "000"; -- Select the FIFO buffers 
                 readWrite <= '1';
                 chipSelect <= '1';
-                timeout_start = '0'; 
-                timeout_reset = '1';    
+                timeout_start <= '0'; 
+                timeout_reset <= '0';    
                      
                 ext_status_sig <= ext_status_sig and x"FFFFFFFA";       -- clear ReadReady and WriteReady
                      
@@ -414,8 +413,8 @@ begin
                 TxRx_sel <= '1';    -- 1 is tx
                 readWrite <= '0';
                 chipSelect <= '0';
-                timeout_start = '1'; 
-                timeout_reset = '1';
+                timeout_start <= '0'; 
+                timeout_reset <= '0';
                 addr <= "000"; -- Select the FIFO buffers 
                 
                 ext_status_sig <= ext_status_sig and x"FFFFFFFA";       -- clear ReadReady and WriteReady
@@ -443,8 +442,8 @@ begin
                 addr <= "000"; -- Select the FIFO buffers 
                 readWrite <= '1';
                 chipSelect <= '1';
-                timeout_start = '0'; 
-                timeout_reset = '0';               
+                timeout_start <= '0'; 
+                timeout_reset <= '0';               
                      
                 ext_status_sig <= ext_status_sig and x"FFFFFFFA";       -- clear ReadReady and WriteReady
                      
@@ -455,8 +454,8 @@ begin
                 addr <= "000"; -- Select the FIFO buffers 
                 readWrite <= '1';
                 chipSelect <= '1'; 
-                timeout_start = '0'; 
-                timeout_reset = '0';    
+                timeout_start <= '0'; 
+                timeout_reset <= '0';    
                      
                 ext_status_sig <= ext_status_sig and x"FFFFFFFA";       -- clear ReadReady and WriteReady
                      
@@ -467,8 +466,8 @@ begin
                 addr <= "000"; -- Select the FIFO buffers 
                 readWrite <= '1';
                 chipSelect <= '1';
-                timeout_start = '0'; 
-                timeout_reset = '1';     
+                timeout_start <= '0'; 
+                timeout_reset <= '0';     
                      
                 ext_status_sig <= ext_status_sig and x"FFFFFFFA";       -- clear ReadReady and WriteReady
     
@@ -479,8 +478,8 @@ begin
                 addr <= "000"; -- Select the FIFO buffers 
                 readWrite <= '1';
                 chipSelect <= '1';
-                timeout_start = '0'; 
-                timeout_reset = '1';     
+                timeout_start <= '0'; 
+                timeout_reset <= '0';     
                      
                 ext_status_sig <= ext_status_sig and x"FFFFFFFA";       -- clear ReadReady and WriteReady
 
@@ -491,8 +490,8 @@ begin
                 addr <= "000"; -- Select the FIFO buffers 
                 readWrite <= '1';
                 chipSelect <= '1';
-                timeout_start = '0'; 
-                timeout_reset = '1';   
+                timeout_start <= '0'; 
+                timeout_reset <= '0';   
                      
                 ext_status_sig <= ext_status_sig and x"FFFFFFFA";       -- clear ReadReady and WriteReady
             
@@ -503,8 +502,8 @@ begin
                 addr <= "000"; -- Select the FIFO buffers 
                 readWrite <= '1';
                 chipSelect <= '1';
-                timeout_start = '0'; 
-                timeout_reset = '1';   
+                timeout_start <= '0'; 
+                timeout_reset <= '0';   
                      
                 ext_status_sig <= ext_status_sig and x"FFFFFFFA";           -- clear ReadReady and WriteReady
             
@@ -515,8 +514,8 @@ begin
                 addr <= "000"; -- Select the FIFO buffers 
                 readWrite <= '1';
                 chipSelect <= '1';
-                timeout_start = '0'; 
-                timeout_reset = '1';    
+                timeout_start <= '0'; 
+                timeout_reset <= '0';    
                      
                 ext_status_sig <= ext_status_sig and x"FFFFFFFA";       -- clear ReadReady and WriteReady
                 
@@ -527,8 +526,8 @@ begin
                 addr <= "000"; -- Select the FIFO buffers 
                 readWrite <= '1';
                 chipSelect <= '1';
-                timeout_start = '0'; 
-                timeout_reset = '1';    
+                timeout_start <= '0'; 
+                timeout_reset <= '0';    
                      
                 ext_status_sig <= ext_status_sig and x"FFFFFFFA";       -- clear ReadReady and WriteReady
                      
@@ -539,8 +538,8 @@ begin
                 addr <= "000"; -- Select the FIFO buffers 
                 readWrite <= '1';
                 chipSelect <= '1';
-                timeout_start = '0'; 
-                timeout_reset = '1'; 
+                timeout_start <= '0'; 
+                timeout_reset <= '0'; 
                      
                 ext_status_sig <= ext_status_sig and x"FFFFFFFA";       -- clear ReadReady and WriteReady
                      
@@ -549,8 +548,8 @@ begin
                 TxRx_sel <= '1';    -- 1 is tx
                 readWrite <= '0';
                 chipSelect <= '0';
-                timeout_start = '1'; 
-                timeout_reset = '1';
+                timeout_start <= '0'; 
+                timeout_reset <= '0';
                 addr <= "000"; -- Select the FIFO buffers 
                      
                 ext_status_sig <= ext_status_sig and x"FFFFFFFA";       -- clear ReadReady and WriteReady
@@ -565,8 +564,8 @@ begin
             	readWrite <= '0';
             	chipSelect <= '0';
             	write_error <= '0';
-                timeout_start = '1'; 
-                timeout_reset = '1';
+                timeout_start <= '0'; 
+                timeout_reset <= '0';
                 
                 ext_status_sig <= ext_status_sig and x"FFFFFFFA"; 		-- clear ReadReady and WriteReady
 
@@ -576,8 +575,8 @@ begin
             	readWrite <= '0';
             	chipSelect <= '1';
             	write_error <= '0';
-                timeout_start = '1'; 
-                timeout_reset = '1';
+                timeout_start <= '0'; 
+                timeout_reset <= '0';
                 
             	ext_status_sig <= ext_status_sig and x"FFFFFFFA"; 		-- clear ReadReady and WriteReady
             	
@@ -587,8 +586,8 @@ begin
             	readWrite <= '0';
             	chipSelect <= '0';
             	write_error <= '0';
-                timeout_start = '1'; 
-                timeout_reset = '1';
+                timeout_start <= '0'; 
+                timeout_reset <= '0';
                 
             	ext_status_sig <= ext_status_sig and x"FFFFFFFA"; 		-- clear ReadReady and WriteReady
             	
@@ -598,8 +597,8 @@ begin
             	readWrite <= '0';
             	chipSelect <= '1';
             	write_error <= '0';
-                timeout_start = '1'; 
-                timeout_reset = '1';
+                timeout_start <= '0'; 
+                timeout_reset <= '0';
                 
                 ext_status_sig <= ext_status_sig and x"FFFFFFFA"; 		-- clear ReadReady and WriteReady
             	 
@@ -609,8 +608,8 @@ begin
             	readWrite <= '0';
             	chipSelect <= '0';
             	write_error <= '0';
-                timeout_start = '1'; 
-                timeout_reset = '1';
+                timeout_start <= '0'; 
+                timeout_reset <= '0';
                 
             	ext_status_sig <= ext_status_sig and x"FFFFFFFA"; 		-- clear ReadReady and WriteReady
 
@@ -620,8 +619,8 @@ begin
             	readWrite <= '0';
             	chipSelect <= '1';
             	write_error <= '0';
-                timeout_start = '1'; 
-                timeout_reset = '1';
+                timeout_start <= '0'; 
+                timeout_reset <= '0';
                 
                 ext_status_sig <= ext_status_sig and x"FFFFFFFA"; 		-- clear ReadReady and WriteReady
 
@@ -631,8 +630,8 @@ begin
             	readWrite <= '0';
             	chipSelect <= '0';
             	write_error <= '0';
-                timeout_start = '1'; 
-                timeout_reset = '1';
+                timeout_start <= '0'; 
+                timeout_reset <= '0';
                 
             	ext_status_sig <= ext_status_sig and x"FFFFFFFA"; 		-- clear ReadReady and WriteReady
             	
@@ -641,8 +640,8 @@ begin
                 TxRx_sel <= '0';
             	readWrite <= '0';
             	chipSelect <= '1';
-                timeout_start = '1'; 
-                timeout_reset = '1';
+                timeout_start <= '0'; 
+                timeout_reset <= '0';
                 
             	ext_status_sig <= ext_status_sig and x"FFFFFFFA"; 		-- clear ReadReady and WriteReady
             	
@@ -652,8 +651,8 @@ begin
             	readWrite <= '0';
             	chipSelect <= '0';
             	write_error <= '0';
-                timeout_start = '1'; 
-                timeout_reset = '1';
+                timeout_start <= '0'; 
+                timeout_reset <= '0';
                 
                 ext_status_sig <= ext_status_sig and x"FFFFFFFA"; 		-- clear ReadReady and WriteReady
 
@@ -662,8 +661,8 @@ begin
             	TxRx_sel <= '0';
             	readWrite <= '0';
             	chipSelect <= '1';
-                timeout_start = '1'; 
-                timeout_reset = '1';
+                timeout_start <= '0'; 
+                timeout_reset <= '0';
                 
             	ext_status_sig <= ext_status_sig and x"FFFFFFFA"; 		-- clear ReadReady and WriteReady
             		
@@ -673,8 +672,8 @@ begin
             	readWrite <= '0';
             	chipSelect <= '0';
             	write_error <= '0';
-                timeout_start = '1'; 
-                timeout_reset = '1';
+                timeout_start <= '0'; 
+                timeout_reset <= '0';
                 
                 ext_status_sig <= ext_status_sig and x"FFFFFFFA"; 		-- clear ReadReady and WriteReady
 
@@ -685,8 +684,8 @@ begin
             	chipSelect <= '1';
             	servo_error_temp <= x"000000" & dataOut;
             	write_error <= '0';
-                timeout_start = '1'; 
-                timeout_reset = '1';
+                timeout_start <= '0'; 
+                timeout_reset <= '0';
 
             	ext_status_sig <= ext_status_sig and x"FFFFFFFA"; 		-- clear ReadReady and WriteReady
             	
@@ -697,8 +696,8 @@ begin
             	readWrite <= '0';
             	chipSelect <= '0';
             	write_error <= '1';
-                timeout_start = '1'; 
-                timeout_reset = '1';
+                timeout_start <= '0'; 
+                timeout_reset <= '0';
 
                 ext_status_sig <= ext_status_sig and x"FFFFFFFA"; 		-- clear ReadReady and WriteReady
 
@@ -708,8 +707,8 @@ begin
             	readWrite <= '0';
             	chipSelect <= '0';
             	write_error <= '0';
-                timeout_start = '1'; 
-                timeout_reset = '1';
+                timeout_start <= '0'; 
+                timeout_reset <= '0';
 
                 ext_status_sig <= ext_status_sig and x"FFFFFFFA"; 		-- clear ReadReady and WriteReady
                	 
@@ -718,8 +717,8 @@ begin
                 TxRx_sel <= '0';    -- 0 is rx
                 chipSelect <= '1';
                 write_error <= '0';
-                timeout_start = '1'; 
-                timeout_reset = '1';
+                timeout_start <= '0'; 
+                timeout_reset <= '0';
                 
                 ext_status_sig <= ext_status_sig and x"00000004"; 		-- Set ReadReady 
               
@@ -906,33 +905,33 @@ begin
                 end if;
 			      
 			when SRE_B3 =>
-			    if( Rdma = '1') then
-                	next_state <= SRE_B4;
-                else
-                	next_state <= SRE_B3;
-                end if;
+				 if( Rdma = '1') then
+					next_state <= SRE_B4;
+				 else
+					next_state <= SRE_B3;
+				 end if;
 				
 			when SRE_B4 =>					-- RxRdy signal active until FIFO is empty in DMA Mode 0
-			    if Rdma = '0' then
-                    next_state <= SRE_B5;	
-                else
-                    next_state <= SRE_B4;
-                end if;
-				
+				 if Rdma = '0' then
+					  next_state <= SRE_B5;	
+				 else
+					  next_state <= SRE_B4;
+				 end if;
+
 			when SRE_B5 =>
-			    if( Rdma = '1') then
-                	next_state <= SRE_B6;
-                else
-                	next_state <= SRE_B5;
-                end if;
-				
+				 if( Rdma = '1') then
+					next_state <= SRE_B6;
+				 else
+					next_state <= SRE_B5;
+				 end if;
+
 			when SRE_B6 =>
-			    if Rdma = '0' then
-                	next_state <= SRE_B7;	
-                else
-                	next_state <= SRE_B6;
-                end if;
-			      
+				 if Rdma = '0' then
+					next_state <= SRE_B7;	
+				 else
+					next_state <= SRE_B6;
+				 end if;
+					
 			when SRE_B7 =>
 			    if( Rdma = '1') then
 					next_state <= SRE_B8;
@@ -942,15 +941,15 @@ begin
 				
 			when SRE_B8 =>					-- RxRdy signal active until FIFO is empty in DMA Mode 0
 				if Rdma = '0' then
-						next_state <= SRE_B9;	
-					else
-						next_state <= SRE_B8;
-					end if;
+					next_state <= SRE_B9;	
+				else
+					next_state <= SRE_B8;
+				end if;
 				
 			when SRE_B9 =>
 			  if( Rdma = '1') then
 					next_state <= SRE_B10;
-			   else
+				else
 					next_state <= SRE_B9;
 				end if;
 				
@@ -958,10 +957,10 @@ begin
 				
 			when SRE_B10 =>					-- RxRdy signal active until FIFO is empty in DMA Mode 0
 				if Rdma = '0' then
-						next_state <= SRE_B11;	
-					else
-						next_state <= SRE_B10;
-					end if;
+					next_state <= SRE_B11;	
+				else
+					next_state <= SRE_B10;
+				end if;
 				
 				
 			when SRE_B11 =>
@@ -1008,15 +1007,15 @@ begin
     TIMEOUT_TIMER: process(clk, reset, timeout_reset, timeout_start)
     begin
         if(reset = '0' or timeout_reset = '0') then
-            timeout_counter = 0;
-            timeout = '0';
-        elsif (rising_edge(clk) and timeout_start = '1' then
+            timeout_counter <= 0;
+            timeout <= '0';
+        elsif (rising_edge(clk) and timeout_start = '1') then
             if timeout_counter >= 400000 then           -- @50mhz this is 0.008 seconds, the dynamixel servos usually respond in around 0.001 seconds
-                timeout_counter = 0;
-                timeout = '1';
+                timeout_counter <= 0;
+                timeout <= '1';
             else 
-                timeout = '0';
-                timeout_counter = timeout_counter + 1;
+                timeout <= '0';
+                timeout_counter <= timeout_counter + 1;
             end if;
         end if;
     end process;
