@@ -46,27 +46,27 @@ class userInputThread(threading.Thread):
 				elif(cmd.group() == "P:"):
 					val = regex_val_float.search(input)
 					if val:
-						print "P: ", int(val.group(),10)
+						print "P: ", float(val.group())
 						with control_system_lock:
-							p = int(val.group())        #Converts the regex parsed input value to an int and store as tilt center
+							p = float(val.group())        #Converts the regex parsed input value to an int and store as tilt center
 							ControlSystemWrapper.update_gains(p,i,d)
 					else:
 						print "Invalid Value:"
 				elif(cmd.group() == "I:"):
 					val = regex_val_float.search(input)
 					if val:
-						print "I: ", int(val.group())
+						print "I: ", float(val.group())
 						with control_system_lock:
-							i = int(val.group())       #Converts the regex parsed input value to an int and store as pan center
+							i = float(val.group())       #Converts the regex parsed input value to an int and store as pan center
 							ControlSystemWrapper.update_gains(p,i,d)
 					else:
 						print "Invalid Value"
 				elif(cmd.group() == "D:"):
 					val = regex_val_float.search(input)
 					if val:
-						print "D: ", int(val.group())
+						print "D: ", float(val.group())
 						with control_system_lock:
-							d = int(val.group())       #Converts the regex parsed input value to an int and store as pan center
+							d = float(val.group())       #Converts the regex parsed input value to an int and store as pan center
 							ControlSystemWrapper.update_gains(p,i,d)
 					else:
 						print "Invalid Value"
@@ -158,7 +158,7 @@ control_system = updateControlSystemThread()
 control_system.start()
 
 while not(run_status == "Quit"):
-    pass
+	time.sleep(2)
 
 if ui.isAlive():
     ui.stop()
