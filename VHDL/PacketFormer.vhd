@@ -874,7 +874,9 @@ begin
             when SWP_B10 =>
                 if Tdma = '1' and timeout  = '0' then
                   next_state <= SWP_B10;
-                else
+                elsif timeout = '1' then
+                  next_state <= S0;
+                else 
                   next_state <= SRE0;
                 end if;
 					
@@ -884,83 +886,103 @@ begin
 			----------------------------------------------------------------------
     
             when SRE0 =>
-                if Rdma = '0' then
+                if Rdma = '0' and timeout = '0' then
                 	next_state <= SRE_B1;	
-                else
-                	next_state <= SRE0;
+                elsif timeout = '1' then
+                    next_state <= S0;
+                else 
+                    next_state <= SRE0;
                 end if;
 				
 			when SRE_B1 =>
-                if( Rdma = '1') then
+                if Rdma = '1' and timeout = '0' then
                 	next_state <= SRE_B2;
-                else
-                	next_state <= SRE_B1;
+                elsif timeout = '1' then
+                    next_state <= S0;
+                else 
+                    next_state <= SRE_B1;
                 end if;
 				
 			when SRE_B2 =>
-                if Rdma = '0' then
+                if Rdma = '0' and timeout = '0' then
                 	next_state <= SRE_B3;	
-                else
-                	next_state <= SRE_B2;
+                elsif timeout = '1' then
+                    next_state <= S0;
+                else 
+                    next_state <= SRE_B2;
                 end if;
 			      
 			when SRE_B3 =>
-				 if( Rdma = '1') then
+				if Rdma = '1' and timeout = '0' then
 					next_state <= SRE_B4;
-				 else
-					next_state <= SRE_B3;
-				 end if;
+				elsif timeout = '1' then
+                    next_state <= S0;
+                else 
+                    next_state <= SRE_B3;
+                end if;
 				
 			when SRE_B4 =>					-- RxRdy signal active until FIFO is empty in DMA Mode 0
-				 if Rdma = '0' then
+				if Rdma = '0' and timeout = '0' then
 					  next_state <= SRE_B5;	
-				 else
-					  next_state <= SRE_B4;
-				 end if;
+				elsif timeout = '1' then
+                    next_state <= S0;
+                else 
+                    next_state <= SRE_B3;
+                end if;
 
 			when SRE_B5 =>
-				 if( Rdma = '1') then
+				if Rdma = '1' and timeout = '0' then
 					next_state <= SRE_B6;
-				 else
-					next_state <= SRE_B5;
-				 end if;
+				elsif timeout = '1' then
+                    next_state <= S0;
+                else 
+                    next_state <= SRE_B5;
+                end if;
 
 			when SRE_B6 =>
-				 if Rdma = '0' then
+				if Rdma = '0' and timeout = '0' then
 					next_state <= SRE_B7;	
-				 else
-					next_state <= SRE_B6;
-				 end if;
+				elsif timeout = '1' then
+                    next_state <= S0;
+                else 
+                    next_state <= SRE_B6;
+                end if;
 					
 			when SRE_B7 =>
-			    if( Rdma = '1') then
+			    if Rdma = '1' and timeout = '0' then
 					next_state <= SRE_B8;
-			    else
-					next_state <= SRE_B7;
-				end if;
+			    elsif timeout = '1' then
+                    next_state <= S0;
+                else 
+                    next_state <= SRE_B7;
+                end if;
 				
 			when SRE_B8 =>					-- RxRdy signal active until FIFO is empty in DMA Mode 0
-				if Rdma = '0' then
+				if Rdma = '0' and timeout = '0' then
 					next_state <= SRE_B9;	
-				else
-					next_state <= SRE_B8;
-				end if;
+				elsif timeout = '1' then
+                    next_state <= S0;
+                else 
+                    next_state <= SRE_B8;
+                end if;
 				
 			when SRE_B9 =>
-			  if( Rdma = '1') then
+			  if Rdma = '1' and timeout = '0' then
 					next_state <= SRE_B10;
-				else
-					next_state <= SRE_B9;
-				end if;
-				
-			
+				elsif timeout = '1' then
+                    next_state <= S0;
+                else 
+                    next_state <= SRE_B9;
+                end if;
 				
 			when SRE_B10 =>					-- RxRdy signal active until FIFO is empty in DMA Mode 0
-				if Rdma = '0' then
+				if Rdma = '0' and timeout = '0' then
 					next_state <= SRE_B11;	
-				else
-					next_state <= SRE_B10;
-				end if;
+				elsif timeout = '1' then
+                    next_state <= S0;
+                else 
+                    next_state <= SRE_B10;
+                end if;
 				
 				
 			when SRE_B11 =>
@@ -970,11 +992,13 @@ begin
 					next_state <= SRE_ERR2;
 					
 			when SRE_ERR2 =>
-				if( Rdma = '1') then
+				if Rdma = '1' and timeout = '0' then
 					next_state <= SRE_B12;
-			   else
-					next_state <= SRE_ERR2;
-				end if;
+			    elsif timeout = '1' then
+                    next_state <= S0;
+                else 
+                    next_state <= SRE_ERR2;
+                end if;
 				
 			when SRE_B12 =>
 			  next_state <= S0;
