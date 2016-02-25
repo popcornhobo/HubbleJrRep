@@ -29,6 +29,8 @@ void* Servo_Set_Roll;
 void* Servo_Error_Roll;
 void* Servo_Set_Yaw;
 void* Servo_Error_Yaw;
+void* Servo_Status_Yaw;
+void* Servo_Reset_Yaw;
 
 /* Function Definitions */
 int control_system_update()
@@ -111,8 +113,12 @@ int control_system_init()
 	Servo_Error_Pitch	    = virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + SERVO_ERROR_ADDR_PITCH ) & ( unsigned long)( HW_REGS_MASK ));
 	Servo_Set_Roll	    	= virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + SET_RATE_ADDR_ROLL ) & ( unsigned long)( HW_REGS_MASK ));
 	Servo_Error_Roll	    = virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + SERVO_ERROR_ADDR_ROLL) & ( unsigned long)( HW_REGS_MASK ));
+	
 	Servo_Set_Yaw	    	= virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + SET_RATE_ADDR_YAW ) & ( unsigned long)( HW_REGS_MASK ));
-	Servo_Error_Yaw	    	= virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + SERVO_ERROR_ADDR_YAW) & ( unsigned long)( HW_REGS_MASK ));
+	Servo_Error_Yaw	   	= virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + SERVO_ERROR_ADDR_YAW) & ( unsigned long)( HW_REGS_MASK ));
+	Servo_Reset_Yaw		= virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + RESET_ADDR_YAW) & ( unsigned long)( HW_REGS_MASK ));
+	Servo_Status_Yaw     = virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + STATUS_ADDR_YAW) & ( unsigned long)( HW_REGS_MASK ));
+	
 	
 	if( virtual_base == MAP_FAILED ) {
 		printf( "ERROR: mmap() failed...\n" );
@@ -120,6 +126,15 @@ int control_system_init()
 		return( 1 );
 	}
 	//----------------------------------------------------------------------//
+	
+	/* Reset Servos */
+	
+	printf("Servo Status Register Yaw: %u\n", (*(uint32_t *) Servo_Status_Yaw));
+	Servo_Reset_Yaw = 0xAA;
+	printf( "Reset : %u\n", Servo_Reset_Yaw);
+	printf("Servo Status Register Yaw: %u\n", (*(uint32_t *) Servo_Status_Yaw));
+	
+	printf("THIS IS NEW CODE NUMBER 1\n");
 	
 	//	ADDITIONAL MEMORY MAPPING	//
 	spi_init(virtual_base);
@@ -229,18 +244,22 @@ void update_servos(double Pitch, double Yaw, double Roll)
 		}
 	}
 
+	uint32_t pre_status = (*(uint32_t *) Servo_Status_Yaw);
+	
 	/* Send the servo commands */	
-	*(uint32_t *) Servo_Set_Pitch= (int)floor(Pitch);
+	*(uint32_t *) Servo_Set_Pitch= 0xAAAA; //(int)floor(Pitch);
 	
-	*(uint32_t *) Servo_Set_Yaw= (int)floor(Yaw);
+	*(uint32_t *) Servo_Set_Yaw= 0xAAAA;//(int)floor(Yaw);
 	
-	*(uint32_t *) Servo_Set_Roll= (int)floor(Roll);
+	*(uint32_t *) Servo_Set_Roll=0xAAAA; //(int)floor(Roll);
 	
 //	printf("Servo Rate Value: %u\n", floor(Yaw));
 	if(counter >= 5){
-		printf("Servo Rate Register Pitch: %u\n\n", (*(uint32_t *) Servo_Set_Pitch));
-		printf("Servo Rate Register Roll: %u\n\n", (*(uint32_t *) Servo_Set_Yaw));
-		printf("Servo Rate Register Yaw: %u\n\n", (*(uint32_t *) Servo_Set_Roll));
+		//printf("Servo Rate Register Pitch: %u\n", (*(uint32_t *) Servo_Set_Pitch));
+		printf("Servo Status Register Yaw: %u\n", pre_status);
+		printf("Servo Rate Register Yaw: %u\n", (*(uint32_t *) Servo_Set_Yaw));
+		printf("Servo Status Register Yaw: %u\n", (*(uint32_t *) Servo_Status_Yaw));
+		//printf("Servo Rate Register Yaw: %u\n", (*(uint32_t *) Servo_Set_Roll));
 		counter = 0;
 	} else{
 		counter++;
