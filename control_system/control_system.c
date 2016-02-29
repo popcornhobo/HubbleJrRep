@@ -75,8 +75,8 @@ int control_system_update()
 
 		/* Apply the gains */
 		xerr *= P;
-		yerr *= P;
-		zerr *= P;
+		yerr *= 10*P;
+		zerr *= 10*P;
 		/* Update Servos
 		 * X is yaw
 		 * Y is roll
@@ -247,11 +247,11 @@ void update_servos(double Pitch, double Yaw, double Roll)
 	uint32_t pre_status = (*(uint32_t *) Servo_Status_Yaw);
 	
 	/* Send the servo commands */	
-	*(uint32_t *) Servo_Set_Pitch= 0xAAAA; //(int)floor(Pitch);
+	*(uint32_t *) Servo_Set_Pitch= (int)floor(Pitch);
 	
-	*(uint32_t *) Servo_Set_Yaw= 0xAAAA;//(int)floor(Yaw);
+	*(uint32_t *) Servo_Set_Yaw = (int)floor(Yaw);
 	
-	*(uint32_t *) Servo_Set_Roll=0xAAAA; //(int)floor(Roll);
+	*(uint32_t *) Servo_Set_Roll = (int)floor(Roll);
 	
 //	printf("Servo Rate Value: %u\n", floor(Yaw));
 	if(counter >= 5){
