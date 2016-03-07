@@ -11,6 +11,7 @@
  * 2016-02-19	v0.3	Moved includes to .h
  * 			Moved defines to .c
  * 			Added set position commands
+ * 2016-03-07	v0.4	Added function descriptions	
  * */
 
 #include "control_system.h"
@@ -33,6 +34,15 @@ void* Servo_Status_Yaw;
 void* Servo_Reset_Yaw;
 
 /* Function Definitions */
+
+/* control_system_update
+ * Description: This function is called by the python wrapper to initate an update
+ * 	Input Parameters:
+ * 		none
+ *
+ * 	Returns:
+ * 		int - status of whether the update completed successfully
+ */
 int control_system_update()
 {
 	/*
@@ -93,11 +103,19 @@ int control_system_update()
 	}
 	return 0;
 }
-
+/*------------------------------ END control_system_update ------------------------------*/
+/* control_system_init
+ * Description: Initializes the memerymaping of registers
+ * 	Input Parameters:
+ * 		none
+ *
+ * 	Returns:
+ * 		int - status of successful initializaion
+ *
+*/
 int control_system_init()
 {
-	//----------------------------------------------------------------------//
-	//	INITIALIZE PORT REGISTERS	//
+	/* INITIALIZE PORT REGISTERS */	
 	
 	void *virtual_base;
 	int fd;	
@@ -125,7 +143,6 @@ int control_system_init()
 		close( fd );
 		return( 1 );
 	}
-	//----------------------------------------------------------------------//
 	
 	/* Reset Servos */
 	
@@ -136,13 +153,21 @@ int control_system_init()
 	
 	printf("THIS IS NEW CODE NUMBER 1\n");
 	
-	//	ADDITIONAL MEMORY MAPPING	//
+	/* ADDITIONAL MEMORY MAPPING */	
 	spi_init(virtual_base);
 	isInitialized = True;
 	return 0;
 }
- 
+/*------------------------------ END control_system_init------------------------------*/ 
 
+/* set_as_current_position
+ * Description: sets the reference position to be the position currently reported by the VN-100
+ * 	Input Parameters:
+ * 		none
+ *
+ * 	Returns:
+ * 		none
+*/
 void set_as_current_position()
 {
 	// reference = Get_Position_From_VN-100
@@ -158,12 +183,35 @@ void set_as_current_position()
 	//printf("Position from VN100 q0:%f   q1:%f   q2:%f   q3:%f\n", q[0], q[1], q[2], q[3]);
 	
 }
+/*------------------------------ END set_as_current_position ------------------------------*/
 
+/* rotate_current_position
+ * Description: rotates the reference position by the given values
+ * 	Input Parameters
+ * 		float pitch - desired pitch change
+ * 		float yaw - desired yaw change
+ * 		float roll - desired roll change
+ *
+ * 	Returns:
+ * 		none
+ *
+*/
 void rotate_current_position(float pitch, float yaw, float roll)
 {
 
 }
+/*------------------------------ END rotate_current_position ------------------------------*/
 
+/* update_gains
+ * Description: Updates the gains for the PID controller with the given parameters
+ * 	Input Parameters:
+ * 		float new_P - the new proportional gain
+ * 		float new_I - the new integral gain
+ *		flaot new_D - the new derivative gain
+ *
+ *	Returns:
+ *		none
+*/
 void update_gains( float new_P, float new_I, float new_D)
 {
 	P = new_P;
@@ -172,12 +220,20 @@ void update_gains( float new_P, float new_I, float new_D)
 	
 	//printf("New Gains P:%f   I:%f   D:%f\n", P, I, D);
 }
-
+/*------------------------------ END update_gains ------------------------------*/
 
 
 /* Local Functions */
 
 /* update_servos
+ * Description: Update the servos to a given rate
+ * 	Input Parameters: 
+ * 		double Pitch - rate for the Pitch Servo
+ * 		double Yaw - rate for the Yaw servo
+ * 		double Roll - rate for the Roll servo
+ *
+ * 	Returns:
+ * 		none
 */
 void update_servos(double Pitch, double Yaw, double Roll)
 {
@@ -185,8 +241,8 @@ void update_servos(double Pitch, double Yaw, double Roll)
 	/* First determine if value is positive or negatve
 	 * then load the value into the servo
 	*/
+
 	/* Scale Error to match motor */
-	
 	static int counter = 0;
 	
 	Pitch *= 1023;
@@ -266,3 +322,4 @@ void update_servos(double Pitch, double Yaw, double Roll)
 	}
     
 }
+/*------------------------------ END update_servos ------------------------------*/
