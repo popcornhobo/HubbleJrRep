@@ -40,8 +40,11 @@
 #define SERVO_ERROR_ADDR_PITCH  	0x0000010C
 #define SET_RATE_ADDR_ROLL              0x00000180
 #define SERVO_ERROR_ADDR_ROLL  	 	0x0000018C
+
 #define SET_RATE_ADDR_YAW               0x00000200
 #define SERVO_ERROR_ADDR_YAW    	0x0000020C
+#define RESET_ADDR_YAW					0x00000210
+#define STATUS_ADDR_YAW					0x00000204
 
 
 /* Function Prototypes */

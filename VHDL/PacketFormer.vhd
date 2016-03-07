@@ -172,7 +172,7 @@ begin
             when SIU_BS1 =>
                 readWrite <= '0';
                 addr <= "000";
-                dataIn <= x"03";
+                dataIn <= x"1B";
 					 chipSelect <= '1';
 					 -- Clear Write Ready Flag: STATUS(2)
                 ext_status_sig <= ext_status_sig and x"FFFFFFFA";		-- clear ReadReady and WriteReady
@@ -180,7 +180,7 @@ begin
             when SIU_BS2 =>
 					 addr <= "000";
                 readWrite <= '1';
-					 dataIn <= x"03";
+					 dataIn <= x"1B";
 					 chipSelect <= '1';
 					 -- Clear Write Ready Flag: STATUS(2)
                 ext_status_sig <= ext_status_sig and x"FFFFFFFA";		-- clear ReadReady and WriteReady
