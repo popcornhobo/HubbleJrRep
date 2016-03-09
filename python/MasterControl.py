@@ -1,29 +1,33 @@
 import ControlSystemWrapper
+import DataPortal as DataCom
 #import ImageCaptureWrapper
 import threading 
 import time
 import re
 
 """
-    This thread class handles all user inputs and alters a global status variable to alter program flow, ensure all threads
-    are properly terminated, and program termination is done safely.
+    This thread class handles all user inputs and alters a global status variable to alter program flow and
+    ensure all threads are properly terminated.
 """
-
-print "Hey im alive!!!"
-
 class userInputThread(threading.Thread):
     def __init__(self,):
         threading.Thread.__init__(self)
         self._stop = threading.Event()
 
     def run(self,):
-		global run_status
-		global p, i, d
-		global run_status_lock
+		global runStatus, runStatusLock
+		global p, i, d, controlSystemLock
 		regex_input = re.compile(r'(.+)\:+\s*(\d*\.*\d*)')
 		regex_cmd = re.compile(r'(.+)\:+')
 		regex_val_int = re.compile(r'(\d+)')
 		regex_val_float = re.compile(r'(\d+\.*\d*)')
+		regex_three_floats = re.compile(r'(\d+\.*\d*),(\d+\.*\d*),(\d+\.*\d*)')
+
+		print "Valid Entries Are \t'P:#.##'\n\t\t\t'I:#.##'"	# Print out the user input command list
+		print "\t\t\t'D:#.##'\n\t\t\t'HoldPos:'"
+		print "\t\t\t'Rotate: yaw,pitch,roll' in Degrees #.##"
+		print "\t\t\t'Stop:'\n\t\t\t'Start:'"
+		print "\t\t\t'Quit:'"
 
 		while (not self._stop.isSet()):
 			input = raw_input("Enter Command: ")
@@ -32,89 +36,128 @@ class userInputThread(threading.Thread):
 				cmd = regex_cmd.match(input)
 				if(cmd.group() == "Stop:"):
 					print "Stopping..."
-					with run_status_lock:
-						run_status = "Stop"
+					with runStatusLock:
+						runStatus = "Stop"
+
 				elif(cmd.group() == "Start:"):
 					print "Starting..."
-					with run_status_lock:
-						run_status = "Start"
+					with runStatusLock:
+						runStatus = "Start"
+
 				elif(cmd.group() == "Quit:"):
 					print "Quitting..."
 					self._stop.set()
-					with run_status_lock:
-						run_status = "Quit"
-				elif(cmd.group() == "P:"):
-					val = regex_val_float.search(input)
-					if val:
-						print "P: ", float(val.group())
-						with control_system_lock:
-							p = float(val.group())        #Converts the regex parsed input value to an int and store as tilt center
-							ControlSystemWrapper.update_gains(p,i,d)
-					else:
-						print "Invalid Value:"
-				elif(cmd.group() == "I:"):
-					val = regex_val_float.search(input)
-					if val:
-						print "I: ", float(val.group())
-						with control_system_lock:
-							i = float(val.group())       #Converts the regex parsed input value to an int and store as pan center
-							ControlSystemWrapper.update_gains(p,i,d)
-					else:
-						print "Invalid Value"
-				elif(cmd.group() == "D:"):
-					val = regex_val_float.search(input)
-					if val:
-						print "D: ", float(val.group())
-						with control_system_lock:
-							d = float(val.group())       #Converts the regex parsed input value to an int and store as pan center
-							ControlSystemWrapper.update_gains(p,i,d)
-					else:
-						print "Invalid Value"
-				else:
-					print "Invalid Entry: \n"
-					print "Valid Entries Are \t'P:#'\n\t\t\t'I:#'"
-					print "\t\t\t'D:#'\n\t\t\t'Stop:'"
-					print "\t\t\t'Start:'\n\t\t\t'Quit:'"
-			else:
-				print "Invalid Entry: \n"
-				print "Valid Entries Are \t'Rate:#.#(deg/s)'\n\t\t\t'ScanBoundTop:#(deg)'"
-				print "\t\t\t'ScanCenterPan:#(deg)'\n\t\t\t'ScanCenterTilt:#(deg)'"
-				print "\t\t\t'ScanRangePan:'#(deg)\n\t\t\t'TiltInc:#(deg)'\n\t\t\t'Stop:'"
-				print "\t\t\t'Start:'\n\t\t\t'Quit:'"
+					with runStatusLock:
+						runStatus = "Quit"
 
-    def stop(self):             # A setter function for the Stop flag
+				elif(cmd.group() == "P:"):
+					match = regex_val_float.search(input)
+					if match:
+						val = float(match.group())	# Converts the regex parsed input value to a float
+						print "P: ", val
+						with controlSystemLock:
+							p = val
+							ControlSystemWrapper.update_gains(p,i,d)	# Update control system Gains after aquiring lock
+					else:
+						print "Invalid Value for 'P:'"
+
+				elif(cmd.group() == "I:"):
+					match = regex_val_float.search(input)
+					if match:
+						val = float(match.group())	# Converts the regex parsed input value to a float
+						print "I: ", val
+						with controlSystemLock:
+							i = val
+							ControlSystemWrapper.update_gains(p,i,d)	# Update control system Gains after aquiring lock
+					else:
+						print "Invalid Value for 'I:'"
+
+				elif(cmd.group() == "D:"):
+					match = regex_val_float.search(input)
+					if match:
+						val = float(match.group())	# Converts the regex parsed input value to a float
+						print "D: ", val
+						with controlSystemLock:
+							d = val 
+							ControlSystemWrapper.update_gains(p,i,d)	# Update control system Gains after aquiring lock
+					else:
+						print "Invalid Value for 'D:'"
+
+				elif(cmd.group() == "HoldPos:"):
+					print "Re-Zeroing Position..."
+					with controlSystemLock:
+						ControlSystemWrapper.set_as_current_position()	# Tell the control system to hold its current pos after aquiring lock
+
+				elif(cmd.group() == "Rotate:")
+					match = regex_three_floats.search(input)
+					if match:
+						(str1,str2,str3) = match.groups()							# Get all the matched substrings 
+						(yaw,pitch,roll) = (float(str1),float(str2),float(str3))	# Convert to floats
+						print "Will rotate by... yaw: ",yaw," ,pitch: ",pitch," ,roll: ",roll
+						confirmation = raw_input("Proceed? 'y'/'n'")
+						if confirmation == "y":										# Get confirmation of rotation to avoid disaster
+							print "Confirmed"
+							with controlSystemLock:
+								ControlSystemWrapper.rotate_current_position(yaw,pitch,roll)	# Adjust the goal position after aquiring lock
+						else:
+							print "Canceled"
+					else:
+						print "Invalid Value for 'Rotate:'"
+
+				else:
+					print "Valid Entries Are \t'P:#.##'\n\t\t\t'I:#.##'"	# Print out the user input command list on failed parse
+					print "\t\t\t'D:#.##'\n\t\t\t'HoldPos:'"
+					print "\t\t\t'Rotate: yaw,pitch,roll' in Degrees #.##"
+					print "\t\t\t'Stop:'\n\t\t\t'Start:'"
+					print "\t\t\t'Quit:'"
+			else:
+				print "Valid Entries Are \t'P:#.##'\n\t\t\t'I:#.##'"	# Print out the user input command list on failed parse
+				print "\t\t\t'D:#.##'\n\t\t\t'HoldPos:'"
+				print "\t\t\t'Rotate: yaw,pitch,roll' in Degrees #.##"
+				print "\t\t\t'Stop:'\n\t\t\t'Start:'"
+				print "\t\t\t'Quit:'"
+
+    def stop(self):             # An internal setter function for the Stop flag
         self._stop.set()
 
 """----------------------------------------------------------------------------------"""
-
+"""
+	This thread class handles updating the control system via the C control system library at the set, global refreshRate
+"""
 class updateControlSystemThread(threading.Thread):
     def __init__(self,):
         threading.Thread.__init__(self)
         self._stop = threading.Event()
     
     def run(self):
-        global run_status
+        global runStatus, errx,erry,errz
+        global runStatusLock, controlSystemLock
         print "Starting Cntrl\n"
         startTime = 0
         status = 0
-        while not (run_status == "Quit" and self._stop.isSet()):
-            with control_system_lock:
-                ControlSystemWrapper.update_gains(p,i,d)
-            while (run_status == "Start") and (time.time() - startTime > 1/refreshRate) and not(self._stop.isSet()):
+        while not (runStatus == "Quit" and self._stop.isSet()):
+            with controlSystemLock:								
+                ControlSystemWrapper.update_gains(p,i,d)				# Ensure the gains are intialized before starting
+
+            while (runStatus == "Start") and (time.time() - startTime > 1/refreshRate) and not(self._stop.isSet()):
                 startTime = time.time()
-                with control_system_lock:
-                    status = ControlSystemWrapper.control_system_update()
+                with controlSystemLock:
+                    [status, errx, erry, errz] = ControlSystemWrapper.control_system_update()		# Trigger a control system update and get the current error values
                     if status == -1:
-                        print "Control System Init Error\n"
-                        with run_status_lock:
-                            run_status = "Quit"
-            with control_system_lock:
-                ControlSystemWrapper.update_gains(0,0,0)
+                        print "Control System Init Error\n"				# The control system was not intialized properly for an unknown reason						
+                        with runStatusLock:
+                            runStatus = "Quit"
+
+            with controlSystemLock:
+                ControlSystemWrapper.update_gains(0,0,0)				# On quit set the gains to zero
         print "Exiting Cntrl\n"
 
     def stop(self):
         self._stop.set()
-
+"""----------------------------------------------------------------------------------"""
+"""
+	Image Capture Yet to be Implimented
+"""
 class captureImage(threading.Thread):
     def __init__(self,):
         threading.Thread.__init__(self)
@@ -124,48 +167,72 @@ class captureImage(threading.Thread):
         print "Starting StrExp\n"
         #insert call to python wrapper for camera start exposure
         print "Exiting StrExp\n"
-
+"""----------------------------------------------------------------------------------"""
+"""
+	Intialization Section: Used to declare globals, create secondary threads,
+	and start the low level systems
+"""
 ui = userInputThread()
 ui.start()
 
-print "Thread Started"
+print "UI Thread Started"
 
 refreshRate = 20
 exposureTime = 20
 
-p = 0
-i = 0
+# NOTE! these values should not be written to without the controlSystemLock
+controlSystemLock = threading.Lock()
+p = 0 
+i = 0      # It is good form to update p,i,d immediatley before calling update_gains() to limit lock passes
 d = 0
 
-run_status = "Stop"
-run_status_lock = threading.Lock()
-control_system_lock = threading.Lock()
+errx = 0 
+erry = 0 	# These should only be used for storing the control_system_update() returned errors but may be read at any time
+errz = 0
+# end NOTE!
+
+# NOTE! these values should not be written to without the runStatusLock
+runStatusLock = threading.Lock()
+runStatus = "Stop"
+# end NOTE!
 
 threadPool = 3
 curThreadCount = 1
-prevCntrlTime = time.time()
-captureStart = False
 
-test = ControlSystemWrapper.control_system_update()
+hostIP = "192.168.1.100"
+udpIP = insertDE0ipHere!! """!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"""
+inputPort = 18001
+outputPort = 18002
+DataCom.portalInit(udpIP, hostIP, inputPort, outputPort)	# Setup the UDP port using the defined information
 
-if test == -1:
-	print "Failed to initialize!!!"
-	
-	
-ControlSystemWrapper.set_as_current_position()
+test = ControlSystemWrapper.control_system_update()			# Call update for the first time now to intialize the system
 
-control_system = updateControlSystemThread()
-control_system.start()
+if test != -1:												# Check if init failed
+	ControlSystemWrapper.set_as_current_position()			# Hold the current IMU position to ensure stable startup
+	controlSystem = updateControlSystemThread()
+	controlSystem.start()									# Start the control system thread 
+else:
+	print "Failed to initialize control system data... Exiting"
+	with runStatusLock:
+		runStatus = "Quit"
+"""----------------------------------------------------------------------------------"""
+"""
+	The main thread 
+"""
+while not(runStatus == "Quit"):
+	if DataCom.graphDataRequested():
+		DataCom.sendDataToHost([0x01,0x03,xerr,yerr,zerr])		# Order is [packet Id, dataLength, dataBytes]
+	else:
+		time.sleep(0.008)	# Sleep for just under 1/100th of a second to save processor power but not stall DataCom transmissions
 
-while not(run_status == "Quit"):
-	time.sleep(2)
-
+if DataCom:
+	DataCom.shutDownPortal()
 if ui.isAlive():
     ui.stop()
     ui.join()
-if control_system.isAlive():
-    control_system.stop()
-    control_system.join()
+if controlSystem.isAlive():
+    controlSystem.stop()
+    controlSystem.join()
 
 
 

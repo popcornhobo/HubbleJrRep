@@ -31,7 +31,7 @@ void* Servo_Set_Yaw;
 void* Servo_Error_Yaw;
 
 /* Function Definitions */
-int control_system_update()
+int control_system_update(float *xerrOut, float *yerrOut, float *zerrOut)
 {
 	/*
 	* Get current position from VN-100
@@ -68,7 +68,12 @@ int control_system_update()
 		xerr = qerr.q1*qerr.q0;
 		yerr = qerr.q2*qerr.q0;
 		zerr = qerr.q3*qerr.q0;
-		
+
+		// Set the error values to be sent via UDP to a laptop
+		*xerrOut = xerr;
+		*yerrOut = yerr;
+		*zerrOut = zerr;
+
 		//printf("Error: Xerr:%lf   Yerr:%lf   Zerr:%lf\n", xerr, yerr, zerr);
 
 		/* Apply the gains */
