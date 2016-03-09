@@ -74,7 +74,7 @@ int control_system_update()
 		//printf("Error: Xerr:%lf   Yerr:%lf   Zerr:%lf\n", xerr, yerr, zerr);
 
 		/* Apply the gains */
-		xerr *= P;
+		xerr *= -P;
 		yerr *= 10*P;
 		zerr *= 10*P;
 		/* Update Servos
@@ -256,9 +256,9 @@ void update_servos(double Pitch, double Yaw, double Roll)
 //	printf("Servo Rate Value: %u\n", floor(Yaw));
 	if(counter >= 5){
 		//printf("Servo Rate Register Pitch: %u\n", (*(uint32_t *) Servo_Set_Pitch));
-		printf("Servo Status Register Yaw: %u\n", pre_status);
-		printf("Servo Rate Register Yaw: %u\n", (*(uint32_t *) Servo_Set_Yaw));
-		printf("Servo Status Register Yaw: %u\n", (*(uint32_t *) Servo_Status_Yaw));
+		//printf("Servo Status Register Yaw: %u\n", pre_status);
+		//printf("Servo Rate Register Yaw: %u\n", (*(uint32_t *) Servo_Set_Yaw));
+		//printf("Servo Status Register Yaw: %u\n", (*(uint32_t *) Servo_Status_Yaw));
 		//printf("Servo Rate Register Yaw: %u\n", (*(uint32_t *) Servo_Set_Roll));
 		counter = 0;
 	} else{

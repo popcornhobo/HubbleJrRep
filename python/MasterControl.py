@@ -130,7 +130,7 @@ ui.start()
 
 print "Thread Started"
 
-refreshRate = 20
+refreshRate = 100
 exposureTime = 20
 
 p = 0
