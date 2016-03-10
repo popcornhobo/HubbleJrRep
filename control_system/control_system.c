@@ -20,21 +20,70 @@ void update_servos(double Pitch, double Yaw, double Roll);
 
 /* Global User Variables */
 unsigned char sensorID = 0;
-double P, I, D =0.0;
+double P[3] = {0,0,0};
+double I[3]  = {0,0,0};
+double D[3] = {0,0,0};
+
 quaternion reference;
 static int isInitialized = False;
-void* Servo_Set_Pitch;
-void* Servo_Error_Pitch;
-void* Servo_Set_Roll;
-void* Servo_Error_Roll;
-void* Servo_Set_Yaw;
-void* Servo_Error_Yaw;
-void* Servo_Status_Yaw;
-void* Servo_Reset_Yaw;
+
+/* pitch servo */
+void* pitch_servo_set_rate;
+void* pitch_servo_set_pos;
+void* pitch_servo_set_ccw;
+void* pitch_servo_set_cw;
+
+void* pitch_servo_get_error;
+void* pitch_servo_get_status;
+
+void* pitch_servo_reset;
+
+
+/* roll servo */
+void* roll_servo_set_rate;
+void* roll_servo_set_pos;
+void* roll_servo_set_ccw;
+void* roll_servo_set_cw;
+
+void* roll_servo_get_error;
+void* roll_servo_get_status;
+
+void* roll_servo_reset;
+
+
+/* yaw servo */
+void* yaw_servo_set_rate;
+void* yaw_servo_set_pos;
+void* yaw_servo_set_ccw;
+void* yaw_servo_set_cw;
+
+void* yaw_servo_get_error;
+void* yaw_servo_get_status;
+
+void* yaw_servo_reset;
+
 
 /* Function Definitions */
 int control_system_update()
 {
+	/* update time_step */
+	static unsigned long int prev_time = 0;
+	static unsigned long int curr_time = 0;
+	float time_step = 0;
+	struct timeval current_time;
+	
+	gettimeofday(&current_time, NULL); 
+	curr_time = current_time.tv_sec * 1000000 + current_time.tv_usec;
+	
+	if(prev_time == 0){
+		time_step = 0;
+	} else{
+		time_step = curr_time - prev_time;
+	}
+	
+	prev_time = curr_time;
+	float time_step_secs = (float) time_step / (float) 1000000;
+	
 	/*
 	* Get current position from VN-100
 	* Calculate Error with Seth's mathsauce (the math sauce king)
@@ -73,15 +122,19 @@ int control_system_update()
 		
 		//printf("Error: Xerr:%lf   Yerr:%lf   Zerr:%lf\n", xerr, yerr, zerr);
 
-		/* Apply the gains */
-		xerr *= -P;
-		yerr *= 10*P;
-		zerr *= 10*P;
+		
 		/* Update Servos
 		 * X is yaw
 		 * Y is roll
 		 * Z is pitch */
-		update_servos(zerr, xerr, yerr);
+		 
+		double error_vect[3];
+		
+		error_vect[0] = zerr;
+		error_vect[1] = xerr;
+		error_vect[2] = yerr;
+		 
+		pid_loop(error_vect, time_step_secs);
 		/*------------------------------------------------------------------------------*/
 	}
 	else
@@ -109,15 +162,41 @@ int control_system_init()
 
 	virtual_base = mmap( NULL, HW_REGS_SPAN, ( PROT_READ | PROT_WRITE ), MAP_SHARED, fd, HW_REGS_BASE );
 	
-	Servo_Set_Pitch	    	= virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + SET_RATE_ADDR_PITCH ) & ( unsigned long)( HW_REGS_MASK ));
-	Servo_Error_Pitch	    = virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + SERVO_ERROR_ADDR_PITCH ) & ( unsigned long)( HW_REGS_MASK ));
-	Servo_Set_Roll	    	= virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + SET_RATE_ADDR_ROLL ) & ( unsigned long)( HW_REGS_MASK ));
-	Servo_Error_Roll	    = virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + SERVO_ERROR_ADDR_ROLL) & ( unsigned long)( HW_REGS_MASK ));
+	/* Pitch Servo  */
+	pitch_servo_set_rate     	= virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + PITCH_SERVO_SET_RATE_ADDR ) & ( unsigned long)( HW_REGS_MASK ));
+	pitch_servo_set_pos 		= virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + PITCH_SERVO_SET_POS_ADDR ) & ( unsigned long)( HW_REGS_MASK ));
+	pitch_servo_set_ccw 		= virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + PITCH_SERVO_SET_CCW_ADDR ) & ( unsigned long)( HW_REGS_MASK ));
+	pitch_servo_set_cw 		= virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + PITCH_SERVO_SET_CW_ADDR ) & ( unsigned long)( HW_REGS_MASK ));
 	
-	Servo_Set_Yaw	    	= virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + SET_RATE_ADDR_YAW ) & ( unsigned long)( HW_REGS_MASK ));
-	Servo_Error_Yaw	   	= virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + SERVO_ERROR_ADDR_YAW) & ( unsigned long)( HW_REGS_MASK ));
-	Servo_Reset_Yaw		= virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + RESET_ADDR_YAW) & ( unsigned long)( HW_REGS_MASK ));
-	Servo_Status_Yaw     = virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + STATUS_ADDR_YAW) & ( unsigned long)( HW_REGS_MASK ));
+	pitch_servo_get_error 	= virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + PITCH_SERVO_GET_ERROR_ADDR ) & ( unsigned long)( HW_REGS_MASK ));
+	pitch_servo_get_status 	= virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + PITCH_SERVO_GET_STATUS_ADDR ) & ( unsigned long)( HW_REGS_MASK ));
+	
+	pitch_servo_reset 			= virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + PITCH_SERVO_RESET_ADDR ) & ( unsigned long)( HW_REGS_MASK ));
+	
+	
+	/* Roll Servo  */
+	roll_servo_set_rate     	= virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + ROLL_SERVO_SET_RATE_ADDR ) & ( unsigned long)( HW_REGS_MASK ));
+	roll_servo_set_pos 		= virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + ROLL_SERVO_SET_POS_ADDR ) & ( unsigned long)( HW_REGS_MASK ));
+	roll_servo_set_ccw 		= virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + ROLL_SERVO_SET_CCW_ADDR ) & ( unsigned long)( HW_REGS_MASK ));
+	roll_servo_set_cw 		= virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + ROLL_SERVO_SET_CW_ADDR ) & ( unsigned long)( HW_REGS_MASK ));
+	
+	roll_servo_get_error 	= virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + ROLL_SERVO_GET_ERROR_ADDR ) & ( unsigned long)( HW_REGS_MASK ));
+	roll_servo_get_status 	= virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + ROLL_SERVO_GET_STATUS_ADDR ) & ( unsigned long)( HW_REGS_MASK ));
+	
+	roll_servo_reset 			= virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + ROLL_SERVO_RESET_ADDR ) & ( unsigned long)( HW_REGS_MASK ));
+	
+	
+	/* Yaw Servo  */
+	yaw_servo_set_rate     	= virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + YAW_SERVO_SET_RATE_ADDR ) & ( unsigned long)( HW_REGS_MASK ));
+	yaw_servo_set_pos 		= virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + YAW_SERVO_SET_POS_ADDR ) & ( unsigned long)( HW_REGS_MASK ));
+	yaw_servo_set_ccw 		= virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + YAW_SERVO_SET_CCW_ADDR ) & ( unsigned long)( HW_REGS_MASK ));
+	yaw_servo_set_cw 		= virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + YAW_SERVO_SET_CW_ADDR ) & ( unsigned long)( HW_REGS_MASK ));
+	
+	yaw_servo_get_error 	= virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + YAW_SERVO_GET_ERROR_ADDR ) & ( unsigned long)( HW_REGS_MASK ));
+	yaw_servo_get_status 	= virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + YAW_SERVO_GET_STATUS_ADDR ) & ( unsigned long)( HW_REGS_MASK ));
+	
+	yaw_servo_reset 			= virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + YAW_SERVO_RESET_ADDR ) & ( unsigned long)( HW_REGS_MASK ));
+	
 	
 	
 	if( virtual_base == MAP_FAILED ) {
@@ -129,12 +208,12 @@ int control_system_init()
 	
 	/* Reset Servos */
 	
-	printf("Servo Status Register Yaw: %u\n", (*(uint32_t *) Servo_Status_Yaw));
-	Servo_Reset_Yaw = 0xAA;
-	printf( "Reset : %u\n", Servo_Reset_Yaw);
-	printf("Servo Status Register Yaw: %u\n", (*(uint32_t *) Servo_Status_Yaw));
+	//printf("Servo Status Register Yaw: %u\n", (*(uint32_t *) Servo_Status_Yaw));
+	//Servo_Reset_Yaw = 0xAA;
+	//printf( "Reset : %u\n", Servo_Reset_Yaw);
+	//printf("Servo Status Register Yaw: %u\n", (*(uint32_t *) Servo_Status_Yaw));
 	
-	printf("THIS IS NEW CODE NUMBER 1\n");
+	//printf("THIS IS NEW CODE NUMBER 1\n");
 	
 	//	ADDITIONAL MEMORY MAPPING	//
 	spi_init(virtual_base);
@@ -164,13 +243,36 @@ void rotate_current_position(float pitch, float yaw, float roll)
 
 }
 
-void update_gains( float new_P, float new_I, float new_D)
+void update_gains(double new_P[], double new_I[], double new_D[])
 {
-	P = new_P;
-	I = new_I;
-	D = new_D;
+	int i;
+	for(i = 0; i < 3; i++){
+		P[i] = new_P[i];
+		I[i] = new_I[i];
+		D[i] = new_D[i];
+		
+	}
+}
+
+void pid_loop(double error[], float time_step)
+{
+	static float integral_error[3] = {0, 0, 0};
+	static float derivative_error[3] = {0, 0, 0};
+
+	float servo_output[3];
+	double last_error[3] = {0,0,0};
 	
-	//printf("New Gains P:%f   I:%f   D:%f\n", P, I, D);
+	int axis;
+	for(axis= 0; axis< 3; axis++){
+		integral_error[axis] += error[axis] * time_step;
+		derivative_error[axis] =  (error[axis] - last_error[axis])/time_step;
+	
+		servo_output[axis] = P[axis] * error[axis] + I[axis] * integral_error[axis] + D[axis] * derivative_error[axis];
+		
+		last_error[axis] = error[axis];
+	}
+	
+	update_servos(servo_output[0], servo_output[1], servo_output[2]);
 }
 
 
@@ -244,14 +346,14 @@ void update_servos(double Pitch, double Yaw, double Roll)
 		}
 	}
 
-	uint32_t pre_status = (*(uint32_t *) Servo_Status_Yaw);
+	//uint32_t pre_status = (*(uint32_t *) Servo_Status_Yaw);
 	
 	/* Send the servo commands */	
-	*(uint32_t *) Servo_Set_Pitch= (int)floor(Pitch);
+	*(uint32_t *) pitch_servo_set_rate	= (int)floor(Pitch);
 	
-	*(uint32_t *) Servo_Set_Yaw = (int)floor(Yaw);
+	*(uint32_t *) yaw_servo_set_rate 	= (int)floor(Yaw);
 	
-	*(uint32_t *) Servo_Set_Roll = (int)floor(Roll);
+	*(uint32_t *) roll_servo_set_rate		= (int)floor(Roll);
 	
 //	printf("Servo Rate Value: %u\n", floor(Yaw));
 	if(counter >= 5){
