@@ -177,7 +177,7 @@ ui.start()
 
 print "UI Thread Started"
 
-refreshRate = 20
+refreshRate = 100
 exposureTime = 20
 
 # NOTE! these values should not be written to without the controlSystemLock
