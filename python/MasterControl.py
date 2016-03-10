@@ -88,7 +88,7 @@ class userInputThread(threading.Thread):
 					with controlSystemLock:
 						ControlSystemWrapper.set_as_current_position()	# Tell the control system to hold its current pos after aquiring lock
 
-				elif(cmd.group() == "Rotate:")
+				elif(cmd.group() == "Rotate:"):
 					match = regex_three_floats.search(input)
 					if match:
 						(str1,str2,str3) = match.groups()							# Get all the matched substrings 
@@ -199,11 +199,11 @@ runStatus = "Stop"
 threadPool = 3
 curThreadCount = 1
 
-hostIP = "192.168.1.100"
-udpIP = insertDE0ipHere!! """!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"""
+hostIP = "192.168.1.200"
+udpIP = "192.168.1.100"
 inputPort = 18001
 outputPort = 18002
-DataCom.portalInit(udpIP, hostIP, inputPort, outputPort)	# Setup the UDP port using the defined information
+DataCom.portalInit(udpIP, hostIP, outputPort, inputPort)	# Setup the UDP port using the defined information
 
 test = ControlSystemWrapper.control_system_update()			# Call update for the first time now to intialize the system
 
@@ -220,8 +220,12 @@ else:
 	The main thread 
 """
 while not(runStatus == "Quit"):
-	if DataCom.graphDataRequested():
-		DataCom.sendDataToHost([0x01,0x03,xerr,yerr,zerr])		# Order is [packet Id, dataLength, dataBytes]
+	status = DataCom.dataStatus()
+	if status != -1:
+		if status == 0x01:
+			DataCom.sendData([0x01,0x03,xerr,yerr,zerr])		# Order is [packet Id, dataLength, dataBytes]
+		elif status == -2:
+			DataCom.sendData([0x00,0x01,0x00])
 	else:
 		time.sleep(0.008)	# Sleep for just under 1/100th of a second to save processor power but not stall DataCom transmissions
 
@@ -234,5 +238,5 @@ if controlSystem.isAlive():
     controlSystem.stop()
     controlSystem.join()
 
-
+"""----------------------------------------------------------------------------------"""
 
