@@ -134,10 +134,15 @@ int control_system_update(float *xerrOut, float *yerrOut, float *zerrOut)
 		 * Z is pitch */
 		 
 		double error_vect[3];
+		double rate_vect[3];
 		
 		error_vect[0] = zerr;
 		error_vect[1] = -xerr;
 		error_vect[2] = yerr;
+		
+		rate_vect[0] = rate[1]; 
+		rate_vect[1] = -rate[3]; 
+		rate_vect[2] = rate[2]; 
 		 
 		pid_loop(error_vect, time_step_secs);
 		/*------------------------------------------------------------------------------*/
@@ -258,7 +263,7 @@ void update_gains(float new_P[], float new_I[], float new_D[])
 	}
 }
 
-void pid_loop(double error[], float time_step)
+void pid_loop(double error[], double rates[], float time_step)
 {
 	static float integral_error[3] = {0, 0, 0};
 	static float derivative_error[3] = {0, 0, 0};
@@ -271,7 +276,7 @@ void pid_loop(double error[], float time_step)
 		integral_error[axis] += error[axis] * time_step;
 		derivative_error[axis] =  (error[axis] - last_error[axis])/time_step;
 	
-		servo_output[axis] = P[axis] * error[axis] + I[axis] * integral_error[axis] - D[axis] * derivative_error[axis];
+		servo_output[axis] = P[axis] * error[axis] + I[axis] * integral_error[axis] - D[axis] * rates[axis];
 		
 		last_error[axis] = error[axis];
 	}

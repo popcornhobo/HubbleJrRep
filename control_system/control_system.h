@@ -86,6 +86,6 @@ void rotate_current_positon(float pitch, float yaw, float roll);
 
 void update_gains(double new_P[], double new_I[], double new_D[]);
 
-void pid_loop(double error[], float time_step);
+void pid_loop(double error[], double rates[], float time_step);
 
 #endif // __CONTROL_SYSTEM_H__
