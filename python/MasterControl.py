@@ -50,38 +50,104 @@ class userInputThread(threading.Thread):
 					with runStatusLock:
 						runStatus = "Quit"
 
-				elif(cmd.group() == "P:"):
+				elif(cmd.group() == "Pyaw:"):
 					match = regex_val_float.search(input)
 					if match:
 						val = float(match.group())	# Converts the regex parsed input value to a float
-						print "P: ", val
+						print "Pyaw: ", val
 						with controlSystemLock:
-							p = val
+							p[1] = val
 							ControlSystemWrapper.update_gains(p,i,d)	# Update control system Gains after aquiring lock
 					else:
-						print "Invalid Value for 'P:'"
+						print "Invalid Value for 'Pyaw:'"
 
-				elif(cmd.group() == "I:"):
+				elif(cmd.group() == "Iyaw:"):
 					match = regex_val_float.search(input)
 					if match:
 						val = float(match.group())	# Converts the regex parsed input value to a float
-						print "I: ", val
+						print "Iyaw: ", val
 						with controlSystemLock:
-							i = val
+							i[1] = val
 							ControlSystemWrapper.update_gains(p,i,d)	# Update control system Gains after aquiring lock
 					else:
-						print "Invalid Value for 'I:'"
+						print "Invalid Value for 'Iyaw:'"
 
-				elif(cmd.group() == "D:"):
+				elif(cmd.group() == "Dyaw:"):
 					match = regex_val_float.search(input)
 					if match:
 						val = float(match.group())	# Converts the regex parsed input value to a float
-						print "D: ", val
+						print "Dyaw: ", val
 						with controlSystemLock:
-							d = val 
+							d[1] = val 
 							ControlSystemWrapper.update_gains(p,i,d)	# Update control system Gains after aquiring lock
 					else:
-						print "Invalid Value for 'D:'"
+						print "Invalid Value for 'Dyaw:'"
+
+				elif(cmd.group() == "Proll:"):
+					match = regex_val_float.search(input)
+					if match:
+						val = float(match.group())	# Converts the regex parsed input value to a float
+						print "Proll: ", val
+						with controlSystemLock:
+							p[2] = val
+							ControlSystemWrapper.update_gains(p,i,d)	# Update control system Gains after aquiring lock
+					else:
+						print "Invalid Value for 'Proll:'"
+
+				elif(cmd.group() == "Iroll:"):
+					match = regex_val_float.search(input)
+					if match:
+						val = float(match.group())	# Converts the regex parsed input value to a float
+						print "Iroll: ", val
+						with controlSystemLock:
+							i[2] = val
+							ControlSystemWrapper.update_gains(p,i,d)	# Update control system Gains after aquiring lock
+					else:
+						print "Invalid Value for 'Iroll:'"
+
+				elif(cmd.group() == "Droll:"):
+					match = regex_val_float.search(input)
+					if match:
+						val = float(match.group())	# Converts the regex parsed input value to a float
+						print "Droll: ", val
+						with controlSystemLock:
+							d[2] = val 
+							ControlSystemWrapper.update_gains(p,i,d)	# Update control system Gains after aquiring lock
+					else:
+						print "Invalid Value for 'Droll:'"
+
+				elif(cmd.group() == "Ppitch:"):
+					match = regex_val_float.search(input)
+					if match:
+						val = float(match.group())	# Converts the regex parsed input value to a float
+						print "Ppitch: ", val
+						with controlSystemLock:
+							p[0] = val
+							ControlSystemWrapper.update_gains(p,i,d)	# Update control system Gains after aquiring lock
+					else:
+						print "Invalid Value for 'Ppitch:'"
+
+				elif(cmd.group() == "Ipitch:"):
+					match = regex_val_float.search(input)
+					if match:
+						val = float(match.group())	# Converts the regex parsed input value to a float
+						print "Ipitch: ", val
+						with controlSystemLock:
+							i[0] = val
+							ControlSystemWrapper.update_gains(p,i,d)	# Update control system Gains after aquiring lock
+					else:
+						print "Invalid Value for 'Ipitch:'"
+
+				elif(cmd.group() == "Dpitch:"):
+					match = regex_val_float.search(input)
+					if match:
+						val = float(match.group())	# Converts the regex parsed input value to a float
+						print "Dpitch: ", val
+						with controlSystemLock:
+							d[0] = val 
+							ControlSystemWrapper.update_gains(p,i,d)	# Update control system Gains after aquiring lock
+					else:
+						print "Invalid Value for 'Dpitch:'"
 
 				elif(cmd.group() == "HoldPos:"):
 					print "Re-Zeroing Position..."
@@ -182,9 +248,9 @@ exposureTime = 20
 
 # NOTE! these values should not be written to without the controlSystemLock
 controlSystemLock = threading.Lock()
-p = 0 
-i = 0      # It is good form to update p,i,d immediatley before calling update_gains() to limit lock passes
-d = 0
+p = [0,0,0] 	 # These lists are in Pitch Yaw Roll order
+i = [0,0,0]      # It is good form to update p,i,d immediatley before calling update_gains() to limit lock passes
+d = [0,0,0]
 
 errx = 0 
 erry = 0 	# These should only be used for storing the control_system_update() returned errors but may be read at any time
