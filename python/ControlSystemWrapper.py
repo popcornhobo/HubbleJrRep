@@ -6,7 +6,7 @@ _controlSystem = ctypes.CDLL('control_system.so')
 _controlSystem.control_system_update.restype = ctypes.c_int
 #_controlSystem.control_system_update.argtypes = (ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float))
 
-_controlSystem.update_gains.argtypes = (ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float))
+_controlSystem.update_gains.argtypes = (ctypes.c_float, ctypes.c_float, ctypes.c_float, ctypes.c_float, ctypes.c_float, ctypes.c_float, ctypes.c_float, ctypes.c_float, ctypes.c_float)
 
 _controlSystem.rotate_current_position.argtypes = (ctypes.c_float, ctypes.c_float, ctypes.c_float)
 
@@ -28,6 +28,19 @@ def rotate_current_position(pitch, yaw, roll):
 
 def update_gains(p, i, d):
 	global _controlSystem
-	arraytpe = ctypes.c_float *3;
-	_controlSystem.update_gains(arraytpe(p),arraytpe(i),arraytpe(d))
+	arraytpe = ctypes.c_float * 3;
+	
+	p_pitch = p[0]
+	p_yaw = p[1]
+	p_roll = p[2]
+	
+	i_pitch = i[0]
+	i_yaw = i[1]
+	i_roll = i[2]
+	
+	d_pitch = d[0]
+	d_yaw = d[1]
+	d_roll = d[2]
+
+	_controlSystem.update_gains(p_pitch, p_yaw, p_roll, i_pitch, i_yaw, i_roll, d_pitch, d_yaw, d_roll,)
 

@@ -140,8 +140,8 @@ int control_system_update()
 		error_vect[1] = -xerr;
 		error_vect[2] = yerr;
 		
-		rate_vect[0] = rates[1]; 
-		rate_vect[1] = -rates[3]; 
+		rate_vect[0] = rates[3]; 
+		rate_vect[1] = -rates[1]; 
 		rate_vect[2] = rates[2]; 
 		 
 		pid_loop(error_vect, rate_vect, time_step_secs);
@@ -272,14 +272,19 @@ void rotate_current_position(float pitch, float yaw, float roll)
 	reference = qrot_res;
 }
 
-void update_gains(float new_P[], float new_I[], float new_D[])
+void update_gains(float P_pitch, float P_yaw, float P_roll, float I_pitch, float I_yaw, float I_roll,  float D_pitch, float D_yaw, float D_roll)
 {
-	int i;
-	for(i = 0; i < 3; i++){
-		P[i] = (double) new_P[i];
-		I[i] = (double) new_I[i];
-		D[i] = (double) new_D[i];
-	}
+		P[0] = P_pitch;
+		P[1] = P_yaw;
+		P[2] = P_roll;
+		
+		I[0] = I_pitch;
+		I[1] = I_yaw;
+		I[2] = I_roll;
+		
+		D[0] = D_pitch;
+		D[1] = D_yaw;
+		D[2] = D_roll;
 }
 
 void pid_loop(double error[], double rates[], float time_step)
@@ -293,9 +298,9 @@ void pid_loop(double error[], double rates[], float time_step)
 	int axis;
 	for(axis= 0; axis< 3; axis++){
 		integral_error[axis] += error[axis] * time_step;
-		derivative_error[axis] =  (error[axis] - last_error[axis])/time_step;
+		//derivative_error[axis] =  (error[axis] - last_error[axis])/time_step;
 	
-		servo_output[axis] = P[axis] * error[axis] + I[axis] * integral_error[axis] - D[axis] * rates[axis];
+		servo_output[axis] = P[axis] * error[axis] + I[axis] * integral_error[axis] + D[axis] * rates[axis];
 		
 		last_error[axis] = error[axis];
 	}

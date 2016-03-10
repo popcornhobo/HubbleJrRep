@@ -208,14 +208,14 @@ class updateControlSystemThread(threading.Thread):
             while (runStatus == "Start") and (time.time() - startTime > 1/refreshRate) and not(self._stop.isSet()):
                 startTime = time.time()
                 with controlSystemLock:
-                    [status, errx, erry, errz] = ControlSystemWrapper.control_system_update()		# Trigger a control system update and get the current error values
+                    status = ControlSystemWrapper.control_system_update()		# Trigger a control system update and get the current error values
                     if status == -1:
                         print "Control System Init Error\n"				# The control system was not intialized properly for an unknown reason						
                         with runStatusLock:
                             runStatus = "Quit"
 
             with controlSystemLock:
-                ControlSystemWrapper.update_gains(0,0,0)				# On quit set the gains to zero
+                ControlSystemWrapper.update_gains([0,0,0], [0,0,0], [0,0,0])				# On quit set the gains to zero
         print "Exiting Cntrl\n"
 
     def stop(self):

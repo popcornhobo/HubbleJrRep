@@ -86,7 +86,7 @@ void set_as_current_position();
 
 void rotate_current_positon(float pitch, float yaw, float roll);
 
-void update_gains(float new_P[], float new_I[], float new_D[]);
+void update_gains(float P_pitch, float P_yaw, float P_roll, float I_pitch, float I_yaw, float I_roll,  float D_pitch, float D_yaw, float D_roll);
 
 void pid_loop(double error[], double rates[], float time_step);
 
