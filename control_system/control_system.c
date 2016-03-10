@@ -136,7 +136,7 @@ int control_system_update(float *xerrOut, float *yerrOut, float *zerrOut)
 		double error_vect[3];
 		
 		error_vect[0] = zerr;
-		error_vect[1] = xerr;
+		error_vect[1] = -xerr;
 		error_vect[2] = yerr;
 		 
 		pid_loop(error_vect, time_step_secs);
@@ -271,7 +271,7 @@ void pid_loop(double error[], float time_step)
 		integral_error[axis] += error[axis] * time_step;
 		derivative_error[axis] =  (error[axis] - last_error[axis])/time_step;
 	
-		servo_output[axis] = P[axis] * error[axis] + I[axis] * integral_error[axis] + D[axis] * derivative_error[axis];
+		servo_output[axis] = P[axis] * error[axis] + I[axis] * integral_error[axis] - D[axis] * derivative_error[axis];
 		
 		last_error[axis] = error[axis];
 	}
