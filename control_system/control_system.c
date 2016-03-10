@@ -248,14 +248,13 @@ void rotate_current_position(float pitch, float yaw, float roll)
 
 }
 
-void update_gains(double new_P[], double new_I[], double new_D[])
+void update_gains(float new_P[], float new_I[], float new_D[])
 {
 	int i;
 	for(i = 0; i < 3; i++){
-		P[i] = new_P[i];
-		I[i] = new_I[i];
-		D[i] = new_D[i];
-		
+		P[i] = (double) new_P[i];
+		I[i] = (double) new_I[i];
+		D[i] = (double) new_D[i];
 	}
 }
 
