@@ -199,8 +199,8 @@ runStatus = "Stop"
 threadPool = 3
 curThreadCount = 1
 
-hostIP = "192.168.1.200"
-udpIP = "192.168.1.100"
+hostIP = "192.168.1.2"
+udpIP = "192.168.1.1"
 inputPort = 18001
 outputPort = 18002
 DataCom.portalInit(udpIP, hostIP, outputPort, inputPort)	# Setup the UDP port using the defined information

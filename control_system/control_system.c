@@ -64,7 +64,7 @@ void* yaw_servo_reset;
 
 
 /* Function Definitions */
-int control_system_update(float *xerrOut, float *yerrOut, float *zerrOut)
+int control_system_update()
 {
 	/* update time_step */
 	static unsigned long int prev_time = 0;
@@ -121,9 +121,9 @@ int control_system_update(float *xerrOut, float *yerrOut, float *zerrOut)
 		zerr = qerr.q3*qerr.q0;
 
 		// Set the error values to be sent via UDP to a laptop
-		*xerrOut = xerr;
-		*yerrOut = yerr;
-		*zerrOut = zerr;
+		//*xerrOut = xerr;
+		//*yerrOut = yerr;
+		//*zerrOut = zerr;
 
 		//printf("Error: Xerr:%lf   Yerr:%lf   Zerr:%lf\n", xerr, yerr, zerr);
 
@@ -140,11 +140,11 @@ int control_system_update(float *xerrOut, float *yerrOut, float *zerrOut)
 		error_vect[1] = -xerr;
 		error_vect[2] = yerr;
 		
-		rate_vect[0] = rate[1]; 
-		rate_vect[1] = -rate[3]; 
-		rate_vect[2] = rate[2]; 
+		rate_vect[0] = rates[1]; 
+		rate_vect[1] = -rates[3]; 
+		rate_vect[2] = rates[2]; 
 		 
-		pid_loop(error_vect, time_step_secs);
+		pid_loop(error_vect, rate_vect, time_step_secs);
 		/*------------------------------------------------------------------------------*/
 	}
 	else
@@ -250,7 +250,26 @@ void set_as_current_position()
 
 void rotate_current_position(float pitch, float yaw, float roll)
 {
+	float pitch_rad 	= (pitch * PI)/180;
+	float roll_rad 		= (roll * PI)/180;
+	float yaw_rad 	= (yaw * PI)/180;
 
+	quaternion qrot_pitch  	= {.q0 = cos(pitch_rad/2), .q1 = 0, .q2 = 0, .q3 = sin(pitch_rad/2)};
+	quaternion qrot_roll 		= {.q0 = cos(roll_rad/2), .q1 = 0, .q2 = sin(roll_rad/2), .q3 = 0};
+	quaternion qrot_yaw 		= {.q0 = cos(yaw_rad/2), .q1 = sin(yaw_rad/2), .q2 = 0, .q3 = 0};
+	
+	quaternion qrot_res 		= quatMult(qrot_pitch, qrot_roll);
+	qrot_res						= quatMult(qrot_res, qrot_yaw);
+	
+	qrot_res = quatNorm(qrot_res);
+	
+	qrot_res = quatMult(qrot_res, reference);
+	
+	quaternion qrot_res_conj = quatConj(qrot_res);
+	
+	qrot_res = quatMult(qrot_res, qrot_res_conj);
+	
+	reference = qrot_res;
 }
 
 void update_gains(float new_P[], float new_I[], float new_D[])

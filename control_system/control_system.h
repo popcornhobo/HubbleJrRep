@@ -39,6 +39,8 @@
 #define True 1
 #define False 0
 
+#define PI 	3.14159265354252		//Yummy
+
 /* Pitch Servo */ 
 #define PITCH_SERVO_SET_RATE_ADDR		0x00000100
 #define PITCH_SERVO_SET_POS_ADDR			(0x00000100 + (0x011 * 4))
@@ -84,7 +86,7 @@ void set_as_current_position();
 
 void rotate_current_positon(float pitch, float yaw, float roll);
 
-void update_gains(double new_P[], double new_I[], double new_D[]);
+void update_gains(float new_P[], float new_I[], float new_D[]);
 
 void pid_loop(double error[], double rates[], float time_step);
 
