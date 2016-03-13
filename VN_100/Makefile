@@ -5,7 +5,7 @@ LDFLAGS =  -g -Wall -lm
 CC = $(CROSS_COMPILE)gcc
 ARCH= arm
 
-all: VN_lib.so VN_user.so VN_math.so soft_spi.so VN100.so 
+all: VN_lib.so VN_user.so VN_math.so soft_spi.so VN100.so VN_UnitTest
 
 VN_lib.so: soft_spi.o VN_lib.o VN_math.o VN_user.o VN100.o
 	$(CC) $(LDFLAGS) $^ -shared -o $@  
@@ -17,6 +17,9 @@ VN100.so: soft_spi.o VN_lib.o VN_math.o VN_user.o VN100.o
 	$(CC) $(LDFLAGS) $^ -shared -o $@  
 soft_spi.so: soft_spi.o VN_lib.o VN_math.o VN_user.o VN100.o
 	$(CC) $(LDFLAGS) -fPIC $^ -shared -o $@  
+	
+VN_UnitTest: VN_UnitTest.o soft_spi.o VN_lib.o VN_math.o VN_user.o VN100.o
+	$(CC) $(LDFLAGS) $^ -o $@  
 	
 %.o : %.c
 	$(CC) $(CFLAGS) -fPIC -c $< -o $@
