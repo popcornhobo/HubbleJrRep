@@ -71,8 +71,9 @@ int main() {
 	
 	
 	/* INITIALIZE SPI */
-	SPI_Init(virtual_base);
+	SPI_Init(virtual_base, 1, 5);
 	
+	usleep(1000 *1000);
 	
 	/* MAIN LOOP */
 	printf("Starting...\n");
@@ -105,6 +106,8 @@ int main() {
 		unsigned long int time = (end_time.tv_sec * 1000000 + end_time.tv_usec) - (start_time.tv_sec * 1000000 + start_time.tv_usec);
 		
 		printf("Completed in %uus\n\n\n", time);
+		
+		usleep(1000);
 	}
 	
 	

@@ -14,17 +14,24 @@
 #include "soft_spi.h"
 
 /*---------------------------------------------------------------------*/
-/* MEMORY MAPPED REGISTERS */
-void * spi_pio_data;
-void * spi_pio_datadir;
+/* Global Variables */
 
+int spi_operating_mode = 0;
 int fd;
 void * virtual_base;
 
 /* Initialized Variable */
 char is_initialized = 0; 
 
+/*---------------------------------------------------------------------*/
+/* Memory Mapped Registers */
 
+void * spi_output_mode;
+void * spi_direct_output;
+void * spi_clock_divisor;
+void * spi_write;
+void * spi_read;
+void * spi_status;
 
 /*---------------------------------------------------------------------*/
 /* PRIVATE FUNCTION PROTOTYPE DECLARATIONS */
@@ -65,6 +72,24 @@ uint8_t SPI_MISO();
 */
 void NOP_Delay(int count); void NOP();
 
+/* SPI_Read_Write_BitBang:
+		Preforms a SPI read write operation using bitbanging
+			Params:
+				data_out - The byte of data to be written
+			Returns:
+				uint8_t - The byte of data read 
+*/
+uint8_t SPI_Read_Write_BitBang(uint8_t data_out);
+
+/* SPI_Read_Write_Hardware:
+		Preforms a SPI read write operation using hardware
+			Params:
+				data_out - The byte of data to be written
+			Returns:
+				uint8_t - The byte of data read 
+*/
+uint8_t SPI_Read_Write_Hardware(uint8_t data_out);
+
 /*---------------------------------------------------------------------*/
 /* PRIVATE DEFINES */
 
@@ -92,17 +117,41 @@ void NOP_Delay(int count); void NOP();
 		Initializes the SPI's memory mapping and data lines
 			Params:
 				virtual_base - base for memory mapping
+				operating_mode - ( 0 ) for software bitbanging, ( 1 ) for hardware spi
+				clock_divsisor - spi_clock_speed = 50MHz / (2 * clock_divsisor) 
 			Returns:
 				Void 
 */
-void SPI_Init(void * virtual_base ){
-	spi_pio_data = virtual_base + ( ( unsigned long  )( ALT_LWFPGASLVS_OFST + SPI_ADDR_PIO_DATA ) & ( unsigned long)( HW_REGS_MASK ) );
-	spi_pio_datadir = virtual_base + ( ( unsigned long  )( ALT_LWFPGASLVS_OFST + SPI_ADDR_PIO_DATADIR ) & ( unsigned long)( HW_REGS_MASK ) );
-	
+void SPI_Init(void * virtual_base, int operating_mode, int clock_divsisor){
+	spi_output_mode	= virtual_base + ( ( unsigned long  )( ALT_LWFPGASLVS_OFST + SPI_ADDR_OUTPUT_MODE ) & ( unsigned long)( HW_REGS_MASK ) );
+	spi_direct_output 	= virtual_base + ( ( unsigned long  )( ALT_LWFPGASLVS_OFST + SPI_ADDR_DIRECT_OUTPUT ) & ( unsigned long)( HW_REGS_MASK ) );
+	spi_clock_divisor	= virtual_base + ( ( unsigned long  )( ALT_LWFPGASLVS_OFST + SPI_ADDR_CLOCK_DIVISOR ) & ( unsigned long)( HW_REGS_MASK ) );
+	spi_write 				= virtual_base + ( ( unsigned long  )( ALT_LWFPGASLVS_OFST + SPI_ADDR_WRITE ) & ( unsigned long)( HW_REGS_MASK ) );
+	spi_read				= virtual_base + ( ( unsigned long  )( ALT_LWFPGASLVS_OFST + SPI_ADDR_READ ) & ( unsigned long)( HW_REGS_MASK ) );
+	spi_status				= virtual_base + ( ( unsigned long  )( ALT_LWFPGASLVS_OFST + SPI_ADDR_STATUS ) & ( unsigned long)( HW_REGS_MASK ) );
+		
 	//Bit order MSB = MOSI - MISO - SS - CLK  
 	
-	*(uint32_t *)spi_pio_datadir = 0b1011;
-	*(uint32_t *)spi_pio_data = 0b1111;
+	
+	/* Initialize outputs */
+	*(uint32_t *)spi_output_mode = 0;
+	*(uint32_t *)spi_direct_output = 0b1111;
+	
+	/* Settup Hardware SPI if it is to be used */ 
+	if(operating_mode == 1){
+		*(uint32_t *)spi_clock_divisor = clock_divsisor;
+		
+		usleep(50); //Wait
+		
+		if(*(uint32_t *)spi_status == 1){ //Check Status 
+			spi_operating_mode = 1;
+			*(uint32_t *)spi_output_mode = 1;
+		} else {
+			printf("Hardware SPI failed to initialize, reverting to software\n");
+			spi_operating_mode = 0;
+		}
+		
+	}
 	
 	is_initialized = 1;
 }
@@ -110,15 +159,41 @@ void SPI_Init(void * virtual_base ){
 /*---------------------------------------------------------------------------------------------*/
 
 
-
 /* SPI_Read_Write:
-		Preforms a SPI read write operation
+		Preforms a SPI read write operation using bitbanging
 			Params:
 				data_out - The byte of data to be written
 			Returns:
 				uint8_t - The byte of data read 
 */
 uint8_t SPI_Read_Write(uint8_t data_out){
+	/* receive variable */
+	uint8_t data_in = 0;
+	
+	/* Use appropriate method of data transmission */
+	if(spi_operating_mode == 1 && *(uint32_t *)spi_output_mode == 1){
+		data_in = SPI_Read_Write_Hardware(data_out);
+	} else if (spi_operating_mode == 0 && *(uint32_t *)spi_output_mode == 0){
+		data_in = SPI_Read_Write_BitBang(data_out);
+	} else {
+		printf("Invalid SPI Configuration\n");
+	}
+	
+	return data_in;
+}
+
+/*---------------------------------------------------------------------------------------------*/
+
+
+
+/* SPI_Read_Write_BitBang:
+		Preforms a SPI read write operation using bitbanging
+			Params:
+				data_out - The byte of data to be written
+			Returns:
+				uint8_t - The byte of data read 
+*/
+uint8_t SPI_Read_Write_BitBang(uint8_t data_out){
 	/* receive variable */
 	uint8_t data_in = 0;
 	
@@ -194,6 +269,33 @@ uint8_t SPI_Read_Write(uint8_t data_out){
 
 
 
+/* SPI_Read_Write_Hardware:
+		Preforms a SPI read write operation using hardware
+			Params:
+				data_out - The byte of data to be written
+			Returns:
+				uint8_t - The byte of data read 
+*/
+uint8_t SPI_Read_Write_Hardware(uint8_t data_out){
+	/* receive variable */
+	uint8_t data_in = 0;
+	
+	/* write the data over spi */
+	*(uint32_t *)spi_write = data_out;
+	
+	/* wait for a return packet */
+	while(*(uint32_t *)spi_status == 0){
+		//Do nothing 
+	}
+	
+	/* return the packet received */
+	data_in = *(uint32_t *)spi_read;
+	
+	return data_in;
+}
+
+/*---------------------------------------------------------------------------------------------*/
+
 /*	SPI_Clock
 		Clocks the SPI line
 			Params:
@@ -203,9 +305,9 @@ uint8_t SPI_Read_Write(uint8_t data_out){
 */
 void SPI_Clock(char state){
 	if(state == 1){
-		*(uint32_t *)spi_pio_data |= 0x00000001;
+		*(uint32_t *)spi_direct_output |= 0x00000001;
 	}else{
-		*(uint32_t *)spi_pio_data &= 0xFFFFFFFE;
+		*(uint32_t *)spi_direct_output &= 0xFFFFFFFE;
 	}
 }
 
@@ -222,9 +324,9 @@ void SPI_Clock(char state){
 */
 void SPI_MOSI(char state){
 	if(state == 1){
-		*(uint32_t *)spi_pio_data |= 0x00000008;
+		*(uint32_t *)spi_direct_output |= 0x00000008;
 	}else{
-		*(uint32_t *)spi_pio_data &= 0xFFFFFFF7;
+		*(uint32_t *)spi_direct_output &= 0xFFFFFFF7;
 	}
 }
 
@@ -245,13 +347,13 @@ void SPI_SS(char state){
 		SPI_Clock(1);
 		
 		/* set SS high */
-		*(uint32_t *) spi_pio_data |= 0x00000002;
+		*(uint32_t *) spi_direct_output |= 0x00000002;
 	} else{
 		/* Ensure that clock line is high */
 		SPI_Clock(1);
 		
 		/* set SS low */
-		*(uint32_t *) spi_pio_data &= 0xFFFFFFFD;
+		*(uint32_t *) spi_direct_output &= 0xFFFFFFFD;
 	}
 }
 
@@ -267,7 +369,7 @@ void SPI_SS(char state){
 				uint8_t - Bit from MISO is the LSB
 */
 uint8_t SPI_MISO(){
-	return (*(uint32_t *)spi_pio_data >> 2) & 1;
+	return (*(uint32_t *)spi_direct_output >> 2) & 1;
 }
 
 /*---------------------------------------------------------------------------------------------*/

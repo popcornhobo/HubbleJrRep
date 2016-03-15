@@ -39,10 +39,13 @@
 #include "hps_0.h"
 
 /*---------------------------------------------------------------------*/
-/*	FPGA SPI PIO ADDRESSES	*/
-#define SPI_ADDR_PIO_DATA			0x000000A0
-#define SPI_ADDR_PIO_DATADIR		0x000000A4
-
+/*	FPGA SPI ADDRESSES */
+#define SPI_ADDR_OUTPUT_MODE	    0x00000280
+#define SPI_ADDR_DIRECT_OUTPUT	0x00000284
+#define SPI_ADDR_CLOCK_DIVISOR	0x00000288
+#define SPI_ADDR_WRITE 				0x0000028C
+#define SPI_ADDR_READ					0x00000290
+#define SPI_ADDR_STATUS 				0x00000294
 
 /*---------------------------------------------------------------------*/
 /* PUBLIC FUNCTION PROTOTYPE DECLARATIONS */
@@ -52,10 +55,12 @@
 		Initializes the SPI's memory mapping and data lines
 			Params:
 				virtual_base - base for memory mapping
+				operating_mode - ( 0 ) for software bitbanging, ( 1 ) for hardware spi
+				clock_divsisor - spi_clock_speed = 50MHz / (2 * clock_divsisor) 
 			Returns:
 				Void 
 */
-void SPI_Init(void * virtual_base );
+void SPI_Init(void * virtual_base, int operating_mode, int clock_divsisor);
 
 
 /* SPI_Read_Write:
