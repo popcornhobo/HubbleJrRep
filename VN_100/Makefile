@@ -25,4 +25,4 @@ VN_UnitTest: VN_UnitTest.o soft_spi.o VN_lib.o VN_math.o VN_user.o VN100.o
 	$(CC) $(CFLAGS) -fPIC -c $< -o $@
 
 clean:
-	rm -f $(TARGET) *.a *.o *.so *~ 
+	rm -f $(TARGET) *.a *.o *.so *~ VN_UnitTest

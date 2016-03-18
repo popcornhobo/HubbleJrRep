@@ -76,6 +76,17 @@
 
 #define YAW_SERVO_RESET_ADDR				(0x00000200 + (0x100 * 4))
 
+/* Axis Saturation Limits */
+#define PITCH_SATURATION 1023
+#define ROLL_SATURATION 1023
+#define YAW_SATURATION 1023
+
+/* Joint mode option */
+//#define USE_PITCH_JOINT_MODE
+//#define USE_ROLL_JOINT_MODE
+  
+/* Reset Speed for joint mode */
+#define RESET_SPEED 100
 
 /* Function Prototypes */
 int control_system_update();

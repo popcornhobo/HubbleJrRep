@@ -226,7 +226,35 @@ int control_system_init()
 	//printf("THIS IS NEW CODE NUMBER 1\n");
 	
 	//	ADDITIONAL MEMORY MAPPING	//
-	spi_init(virtual_base);
+	
+	/* INITIALIZE SPI */
+	SPI_Init(virtual_base, 1, 5);
+	
+	/* SETUP SERVOS */
+	
+	#ifdef USE_PITCH_JOINT_MODE
+		*(uint32_t *)pitch_servo_set_ccw = 1024;
+		*(uint32_t *)pitch_servo_set_cw = 0;
+		
+		*(uint32_t *)pitch_servo_set_rate =  RESET_SPEED;
+		*(uint32_t *)pitch_servo_set_pos = 512;
+	#else
+		*(uint32_t *)pitch_servo_set_ccw = 0;
+		*(uint32_t *)pitch_servo_set_cw = 0;
+	#endif
+	
+	
+	#ifdef USE_ROLL_JOINT_MODE
+		*(uint32_t *)roll_servo_set_ccw = 1024;
+		*(uint32_t *)roll_servo_set_cw = 0;
+		
+		*(uint32_t *)roll_servo_set_rate =  RESET_SPEED;
+		*(uint32_t *)roll_servo_set_pos = 512;
+	#else
+		*(uint32_t *)roll_servo_set_ccw = 0;
+		*(uint32_t *)roll_servo_set_cw = 0;
+	#endif
+	
 	isInitialized = True;
 	return 0;
 }
@@ -327,66 +355,122 @@ void update_servos(double Pitch, double Yaw, double Roll)
 	Pitch *= 1023;
 	Yaw   *= 1023;
 	Roll  *= 1023;
-	/* Update Pitch */
-	if (Pitch < 0) 
-	{
-		Pitch = abs(Pitch) + 1024; // 1024 is where negative values start for the motor
-
-		if(Pitch > 2047)
-		{
-			Pitch = 2047;
+	
+	#ifdef USE_PITCH_JOINT_MODE
+		if(P[0] != 0){ //Only update for a non zero gain
+			/* Update Pitch */
+			if (Pitch < 0)
+			{
+				*(uint32_t *) pitch_servo_set_pos = 0;
+			}
+			else
+			{
+				*(uint32_t *) pitch_servo_set_pos = 1024;
+			}
+			
+			/* Abs Roll */
+			Pitch = abs(Pitch);
+			
+			/* Check saturation limits*/
+			if(Pitch > PITCH_SATURATION){
+				Pitch = PITCH_SATURATION;
+			}
+			
+			*(uint32_t *) pitch_servo_set_rate = (int)floor(Roll);
+		} else {
+			*(uint32_t *)pitch_servo_set_rate = RESET_SPEED;
+			*(uint32_t *)pitch_servo_set_pos = 512;
 		}
-	}
-	else
-	{
-		if(Pitch > 1023)
+	#else
+		/* Update Pitch */
+		if (Pitch < 0) 
 		{
-			Pitch = 1023;
-		}
-	}
+			Pitch = abs(Pitch) + 1024; // 1024 is where negative values start for the motor
 
+			if(Pitch > (PITCH_SATURATION + 1024))
+			{
+				Pitch = PITCH_SATURATION + 1024;
+			}
+		}
+		else
+		{
+			if(Pitch > PITCH_SATURATION)
+			{
+				Pitch = PITCH_SATURATION;
+			}
+		}
+		
+		*(uint32_t *) pitch_servo_set_rate	= (int)floor(Pitch);
+	#endif
+	
+	
 	/* Update Yaw */
 	if (Yaw < 0)
 	{
 		Yaw = abs(Yaw) + 1024; // 1024 is where negative values start for the servo
-		if(Yaw > 2047)
+		if(Yaw > (YAW_SATURATION + 1024))
 		{
-			Yaw = 2047;
+			Yaw = YAW_SATURATION + 1024;
 		}
 	}
 	else
 	{
-		if(Yaw > 1023)
+		if(Yaw > YAW_SATURATION)
 		{
-			Yaw = 1023;
+			Yaw = YAW_SATURATION;
 		}
 	}
 	
-	/* Update Roll */
-	if (Roll < 0)
-	{
-		Roll = abs(Roll) + 1024; // 1024 is where negative values start for the servo
-		if(Roll> 2047)
-		{
-			Roll = 2047;
+	*(uint32_t *) yaw_servo_set_rate = (int)floor(Yaw);
+	
+	
+	#ifdef USE_ROLL_JOINT_MODE
+		if(P[2] != 0){ //Only update for a non zero gain
+			/* Update Roll */
+			if (Roll < 0)
+			{
+				*(uint32_t *) roll_servo_set_pos = 0;
+			}
+			else
+			{
+				*(uint32_t *) roll_servo_set_pos = 1024;
+			}
+			
+			/* Abs Roll */
+			Roll = abs(Roll);
+			
+			/* Check saturation limits*/
+			if(Roll > ROLL_SATURATION){
+				Roll = ROLL_SATURATION;
+			}
+			
+			*(uint32_t *) roll_servo_set_rate = (int)floor(Roll);
+		} else { //Reset for a zero gain
+			*(uint32_t *)roll_servo_set_rate = RESET_SPEED;
+			*(uint32_t *)roll_servo_set_pos = 512;
 		}
-	}
-	else
-	{
-		if(Roll > 1023)
+	#else 
+		/* Update Roll */
+		if (Roll < 0)
 		{
-			Roll = 1023;
+			Roll = abs(Roll) + 1024; // 1024 is where negative values start for the servo
+			if(Roll> (ROLL_SATURATION + 1024))
+			{
+				Roll = ROLL_SATURATION + 1024;
+			}
 		}
-	}
-
+		else
+		{
+			if(Roll > ROLL_SATURATION)
+			{
+				Roll = ROLL_SATURATION;
+			}
+		}
+		
+		*(uint32_t *) roll_servo_set_rate = (int)floor(Roll);
+	#endif
+	
 	//uint32_t pre_status = (*(uint32_t *) Servo_Status_Yaw);
-	
-	/* Send the servo commands */	
-	*(uint32_t *) pitch_servo_set_rate	= (int)floor(Pitch);
-	
-	*(uint32_t *) yaw_servo_set_rate 	= (int)floor(Yaw);
-	
-	*(uint32_t *) roll_servo_set_rate		= (int)floor(Roll);
 	
 //	printf("Servo Rate Value: %u\n", floor(Yaw));
 	if(counter >= 5){
