@@ -71,7 +71,7 @@ def dataStatus():					# Returns -1 if the receiver has yet to receive a packet s
 
 def shutDownPortal():
 	global receiver
-	com_socket.close()
+	comSocket.close()
 	receiver.stop()
 
 def getDataBuffer():
@@ -89,13 +89,13 @@ def sendData(dataPacket):
 		checksum += byte
 	checksum = checksum%255
 	totalBuffer += chr(checksum)
-	com_socket.sendto(totalBuffer, (UDP_IP,UDP_OUTPUT_PORT))
+	comSocket.sendto(totalBuffer, (UDP_IP,UDP_OUTPUT_PORT))
 
 """----------------------------------------------------------------------------------"""
 """
 	Define the global variables
 """
-com_socket = None
+comSocket = None
 receiver = None
 UDP_IP = ""
 UDP_OUTPUT_PORT = ""
@@ -107,24 +107,24 @@ idlock = threading.Lock()
 	receiver thread to begin listening for commands. 
 """
 def portalInit(IP,hostIP,outPort,inPort):
-	global UDP_IP, UDP_OUTPUT_PORT, com_socket, receiver
+	global UDP_IP, UDP_OUTPUT_PORT, comSocket, receiver
 	UDP_IP = IP					# Ip of the receiver
 	UDP_HOSTIP = hostIP 		# Ip of the sender
 	UDP_OUTPUT_PORT = outPort   # Output port is input port of DE0
 	UDP_INPUT_PORT = inPort		# Input port is reply port of DE0
 
 	try:
-		com_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)	#intialise socket for UDP
+		comSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)	#intialise socket for UDP
 	except socket.error, msg:
 		print 'Socket Error:' + str(msg[0]) + " Message:" + str(msg[1])
 		sys.exit()
 
-	com_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)	# Allow a bidirectional socket
-	com_socket.setblocking(1)											# Block on socket commands
-	com_socket.settimeout(0)											# Exert socket.timeout never
+	comSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)	# Allow a bidirectional socket
+	comSocket.setblocking(1)											# Block on socket commands
+	comSocket.settimeout(0)											# Exert socket.timeout never
 
 	try:
-		com_socket.bind((UDP_HOSTIP,UDP_INPUT_PORT))		# Bind socket to the port and IP
+		comSocket.bind((UDP_HOSTIP,UDP_INPUT_PORT))		# Bind socket to the port and IP
 		receiver = recvThread()
 		receiver.start()									# Start the receiver thread if no exceptions thrown
 	except socket.error, msg:
@@ -147,5 +147,5 @@ def sendErrorData(xerr,yerr,zerr):
 
 	check_sum = (check_sum%255)
 	completeBuffer += chr(check_sum)
-	com_socket.sendto(complete_buffer, (UDP_IP,UDP_OUTPUT_PORT))
+	comSocket.sendto(complete_buffer, (UDP_IP,UDP_OUTPUT_PORT))
 """----------------------------------------------------------------------------------"""

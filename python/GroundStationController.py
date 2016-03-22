@@ -7,8 +7,8 @@ def graphControlSystemError(errorData,time):
 	print "Time: ", time
 	print "Buffer: ", errorData
 
-gimbalIP = "192.168.1.200"
-yourIP = "192.168.1.100"
+gimbalIP = "192.168.1.2"
+yourIP = "192.168.1.1"
 inputPort = 18002
 outputPort = 18001
 

@@ -39,6 +39,8 @@
 #define True 1
 #define False 0
 
+#define PI 	3.14159265354252		//Yummy
+
 /* Pitch Servo */ 
 #define PITCH_SERVO_SET_RATE_ADDR		0x00000100
 #define PITCH_SERVO_SET_POS_ADDR			(0x00000100 + (0x011 * 4))
@@ -74,6 +76,17 @@
 
 #define YAW_SERVO_RESET_ADDR				(0x00000200 + (0x100 * 4))
 
+/* Axis Saturation Limits */
+#define PITCH_SATURATION 1023
+#define ROLL_SATURATION 1023
+#define YAW_SATURATION 1023
+
+/* Joint mode option */
+//#define USE_PITCH_JOINT_MODE
+//#define USE_ROLL_JOINT_MODE
+  
+/* Reset Speed for joint mode */
+#define RESET_SPEED 100
 
 /* Function Prototypes */
 int control_system_update();
@@ -84,8 +97,8 @@ void set_as_current_position();
 
 void rotate_current_positon(float pitch, float yaw, float roll);
 
-void update_gains(double new_P[], double new_I[], double new_D[]);
+void update_gains(float P_pitch, float P_yaw, float P_roll, float I_pitch, float I_yaw, float I_roll,  float D_pitch, float D_yaw, float D_roll);
 
-void pid_loop(double error[], float time_step);
+void pid_loop(double error[], double rates[], float time_step);
 
 #endif // __CONTROL_SYSTEM_H__

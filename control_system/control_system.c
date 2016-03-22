@@ -64,7 +64,7 @@ void* yaw_servo_reset;
 
 
 /* Function Definitions */
-int control_system_update(float *xerrOut, float *yerrOut, float *zerrOut)
+int control_system_update()
 {
 	/* update time_step */
 	static unsigned long int prev_time = 0;
@@ -121,9 +121,9 @@ int control_system_update(float *xerrOut, float *yerrOut, float *zerrOut)
 		zerr = qerr.q3*qerr.q0;
 
 		// Set the error values to be sent via UDP to a laptop
-		*xerrOut = xerr;
-		*yerrOut = yerr;
-		*zerrOut = zerr;
+		//*xerrOut = xerr;
+		//*yerrOut = yerr;
+		//*zerrOut = zerr;
 
 		//printf("Error: Xerr:%lf   Yerr:%lf   Zerr:%lf\n", xerr, yerr, zerr);
 
@@ -134,12 +134,17 @@ int control_system_update(float *xerrOut, float *yerrOut, float *zerrOut)
 		 * Z is pitch */
 		 
 		double error_vect[3];
+		double rate_vect[3];
 		
 		error_vect[0] = zerr;
-		error_vect[1] = xerr;
+		error_vect[1] = -xerr;
 		error_vect[2] = yerr;
+		
+		rate_vect[0] = rates[3]; 
+		rate_vect[1] = -rates[1]; 
+		rate_vect[2] = rates[2]; 
 		 
-		pid_loop(error_vect, time_step_secs);
+		pid_loop(error_vect, rate_vect, time_step_secs);
 		/*------------------------------------------------------------------------------*/
 	}
 	else
@@ -221,7 +226,35 @@ int control_system_init()
 	//printf("THIS IS NEW CODE NUMBER 1\n");
 	
 	//	ADDITIONAL MEMORY MAPPING	//
-	spi_init(virtual_base);
+	
+	/* INITIALIZE SPI */
+	SPI_Init(virtual_base, 1, 5);
+	
+	/* SETUP SERVOS */
+	
+	#ifdef USE_PITCH_JOINT_MODE
+		*(uint32_t *)pitch_servo_set_ccw = 1024;
+		*(uint32_t *)pitch_servo_set_cw = 0;
+		
+		*(uint32_t *)pitch_servo_set_rate =  RESET_SPEED;
+		*(uint32_t *)pitch_servo_set_pos = 512;
+	#else
+		*(uint32_t *)pitch_servo_set_ccw = 0;
+		*(uint32_t *)pitch_servo_set_cw = 0;
+	#endif
+	
+	
+	#ifdef USE_ROLL_JOINT_MODE
+		*(uint32_t *)roll_servo_set_ccw = 1024;
+		*(uint32_t *)roll_servo_set_cw = 0;
+		
+		*(uint32_t *)roll_servo_set_rate =  RESET_SPEED;
+		*(uint32_t *)roll_servo_set_pos = 512;
+	#else
+		*(uint32_t *)roll_servo_set_ccw = 0;
+		*(uint32_t *)roll_servo_set_cw = 0;
+	#endif
+	
 	isInitialized = True;
 	return 0;
 }
@@ -245,21 +278,44 @@ void set_as_current_position()
 
 void rotate_current_position(float pitch, float yaw, float roll)
 {
+	float pitch_rad 	= (pitch * PI)/180;
+	float roll_rad 		= (roll * PI)/180;
+	float yaw_rad 	= (yaw * PI)/180;
 
+	quaternion qrot_pitch  	= {.q0 = cos(pitch_rad/2), .q1 = 0, .q2 = 0, .q3 = sin(pitch_rad/2)};
+	quaternion qrot_roll 		= {.q0 = cos(roll_rad/2), .q1 = 0, .q2 = sin(roll_rad/2), .q3 = 0};
+	quaternion qrot_yaw 		= {.q0 = cos(yaw_rad/2), .q1 = sin(yaw_rad/2), .q2 = 0, .q3 = 0};
+	
+	quaternion qrot_res 		= quatMult(qrot_pitch, qrot_roll);
+	qrot_res						= quatMult(qrot_res, qrot_yaw);
+	
+	qrot_res = quatNorm(qrot_res);
+	
+	qrot_res = quatMult(qrot_res, reference);
+	
+	quaternion qrot_res_conj = quatConj(qrot_res);
+	
+	qrot_res = quatMult(qrot_res, qrot_res_conj);
+	
+	reference = qrot_res;
 }
 
-void update_gains(double new_P[], double new_I[], double new_D[])
+void update_gains(float P_pitch, float P_yaw, float P_roll, float I_pitch, float I_yaw, float I_roll,  float D_pitch, float D_yaw, float D_roll)
 {
-	int i;
-	for(i = 0; i < 3; i++){
-		P[i] = new_P[i];
-		I[i] = new_I[i];
-		D[i] = new_D[i];
+		P[0] = P_pitch;
+		P[1] = P_yaw;
+		P[2] = P_roll;
 		
-	}
+		I[0] = I_pitch;
+		I[1] = I_yaw;
+		I[2] = I_roll;
+		
+		D[0] = D_pitch;
+		D[1] = D_yaw;
+		D[2] = D_roll;
 }
 
-void pid_loop(double error[], float time_step)
+void pid_loop(double error[], double rates[], float time_step)
 {
 	static float integral_error[3] = {0, 0, 0};
 	static float derivative_error[3] = {0, 0, 0};
@@ -270,9 +326,9 @@ void pid_loop(double error[], float time_step)
 	int axis;
 	for(axis= 0; axis< 3; axis++){
 		integral_error[axis] += error[axis] * time_step;
-		derivative_error[axis] =  (error[axis] - last_error[axis])/time_step;
+		//derivative_error[axis] =  (error[axis] - last_error[axis])/time_step;
 	
-		servo_output[axis] = P[axis] * error[axis] + I[axis] * integral_error[axis] + D[axis] * derivative_error[axis];
+		servo_output[axis] = P[axis] * error[axis] + I[axis] * integral_error[axis] + D[axis] * rates[axis];
 		
 		last_error[axis] = error[axis];
 	}
@@ -299,66 +355,122 @@ void update_servos(double Pitch, double Yaw, double Roll)
 	Pitch *= 1023;
 	Yaw   *= 1023;
 	Roll  *= 1023;
-	/* Update Pitch */
-	if (Pitch < 0) 
-	{
-		Pitch = abs(Pitch) + 1024; // 1024 is where negative values start for the motor
-
-		if(Pitch > 2047)
-		{
-			Pitch = 2047;
+	
+	#ifdef USE_PITCH_JOINT_MODE
+		if(P[0] != 0){ //Only update for a non zero gain
+			/* Update Pitch */
+			if (Pitch < 0)
+			{
+				*(uint32_t *) pitch_servo_set_pos = 0;
+			}
+			else
+			{
+				*(uint32_t *) pitch_servo_set_pos = 1024;
+			}
+			
+			/* Abs Roll */
+			Pitch = abs(Pitch);
+			
+			/* Check saturation limits*/
+			if(Pitch > PITCH_SATURATION){
+				Pitch = PITCH_SATURATION;
+			}
+			
+			*(uint32_t *) pitch_servo_set_rate = (int)floor(Roll);
+		} else {
+			*(uint32_t *)pitch_servo_set_rate = RESET_SPEED;
+			*(uint32_t *)pitch_servo_set_pos = 512;
 		}
-	}
-	else
-	{
-		if(Pitch > 1023)
+	#else
+		/* Update Pitch */
+		if (Pitch < 0) 
 		{
-			Pitch = 1023;
-		}
-	}
+			Pitch = abs(Pitch) + 1024; // 1024 is where negative values start for the motor
 
+			if(Pitch > (PITCH_SATURATION + 1024))
+			{
+				Pitch = PITCH_SATURATION + 1024;
+			}
+		}
+		else
+		{
+			if(Pitch > PITCH_SATURATION)
+			{
+				Pitch = PITCH_SATURATION;
+			}
+		}
+		
+		*(uint32_t *) pitch_servo_set_rate	= (int)floor(Pitch);
+	#endif
+	
+	
 	/* Update Yaw */
 	if (Yaw < 0)
 	{
 		Yaw = abs(Yaw) + 1024; // 1024 is where negative values start for the servo
-		if(Yaw > 2047)
+		if(Yaw > (YAW_SATURATION + 1024))
 		{
-			Yaw = 2047;
+			Yaw = YAW_SATURATION + 1024;
 		}
 	}
 	else
 	{
-		if(Yaw > 1023)
+		if(Yaw > YAW_SATURATION)
 		{
-			Yaw = 1023;
+			Yaw = YAW_SATURATION;
 		}
 	}
 	
-	/* Update Roll */
-	if (Roll < 0)
-	{
-		Roll = abs(Roll) + 1024; // 1024 is where negative values start for the servo
-		if(Roll> 2047)
-		{
-			Roll = 2047;
+	*(uint32_t *) yaw_servo_set_rate = (int)floor(Yaw);
+	
+	
+	#ifdef USE_ROLL_JOINT_MODE
+		if(P[2] != 0){ //Only update for a non zero gain
+			/* Update Roll */
+			if (Roll < 0)
+			{
+				*(uint32_t *) roll_servo_set_pos = 0;
+			}
+			else
+			{
+				*(uint32_t *) roll_servo_set_pos = 1024;
+			}
+			
+			/* Abs Roll */
+			Roll = abs(Roll);
+			
+			/* Check saturation limits*/
+			if(Roll > ROLL_SATURATION){
+				Roll = ROLL_SATURATION;
+			}
+			
+			*(uint32_t *) roll_servo_set_rate = (int)floor(Roll);
+		} else { //Reset for a zero gain
+			*(uint32_t *)roll_servo_set_rate = RESET_SPEED;
+			*(uint32_t *)roll_servo_set_pos = 512;
 		}
-	}
-	else
-	{
-		if(Roll > 1023)
+	#else 
+		/* Update Roll */
+		if (Roll < 0)
 		{
-			Roll = 1023;
+			Roll = abs(Roll) + 1024; // 1024 is where negative values start for the servo
+			if(Roll> (ROLL_SATURATION + 1024))
+			{
+				Roll = ROLL_SATURATION + 1024;
+			}
 		}
-	}
-
+		else
+		{
+			if(Roll > ROLL_SATURATION)
+			{
+				Roll = ROLL_SATURATION;
+			}
+		}
+		
+		*(uint32_t *) roll_servo_set_rate = (int)floor(Roll);
+	#endif
+	
 	//uint32_t pre_status = (*(uint32_t *) Servo_Status_Yaw);
-	
-	/* Send the servo commands */	
-	*(uint32_t *) pitch_servo_set_rate	= (int)floor(Pitch);
-	
-	*(uint32_t *) yaw_servo_set_rate 	= (int)floor(Yaw);
-	
-	*(uint32_t *) roll_servo_set_rate		= (int)floor(Roll);
 	
 //	printf("Servo Rate Value: %u\n", floor(Yaw));
 	if(counter >= 5){
