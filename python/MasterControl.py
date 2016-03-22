@@ -17,38 +17,47 @@ class userInputThread(threading.Thread):
     def run(self,):
 		global runStatus, runStatusLock
 		global p, i, d, controlSystemLock
-		regex_input = re.compile(r'(.+)\:+\s*(\d*\.*\d*)')
-		regex_cmd = re.compile(r'(.+)\:+')
+		regex_input = re.compile(r'(\w+)\s*\:\s*(\d*\.*\d*)*\s*')
+		regex_cmd = re.compile(r'(\w+)\s*\:')
 		regex_val_int = re.compile(r'(\d+)')
 		regex_val_float = re.compile(r'(\d+\.*\d*)')
 		regex_three_floats = re.compile(r'(\d+\.*\d*),(\d+\.*\d*),(\d+\.*\d*)')
 
-		print "Valid Entries Are \t'P:#.##'\n\t\t\t'I:#.##'"	# Print out the user input command list
-		print "\t\t\t'D:#.##'\n\t\t\t'HoldPos:'"
+		print "Valid Entries Are \t'Pyaw:#.##'\n\t\t\t'Iyaw:#.##'\n\t\t\t'Dyaw:#.##'"
+		print "\t\t\t'Ppitch:#.##'\n\t\t\t'Ipitch:#.##'\n\t\t\t'Dpitch:#.##'"
+		print "\t\t\t'Proll:#.##'\n\t\t\t'Iroll:#.##'\n\t\t\t'Droll:#.##'"
 		print "\t\t\t'Rotate: yaw,pitch,roll' in Degrees #.##"
-		print "\t\t\t'Stop:'\n\t\t\t'Start:'"
-		print "\t\t\t'Quit:'"
+		print "\t\t\t'HoldPos:'\n\t\t\t'Stop:'\n\t\t\t'Start:'"
+		print "\t\t\t'Help:'\n\t\t\t'Quit:'"
 
 		while (not self._stop.isSet()):
 			input = raw_input("Enter Command: ")
 			match = regex_input.match(input)
-			if match:                                   #Use regular Expressions to parse command line inputs
+			if match:                                   # Use regular Expressions to parse command line inputs
 				cmd = regex_cmd.match(input)
 				if(cmd.group() == "Stop:"):
-					print "Stopping..."
+					print "Stopping..."					# Stop correction
 					with runStatusLock:
 						runStatus = "Stop"
 
 				elif(cmd.group() == "Start:"):
-					print "Starting..."
+					print "Starting..."					# Allow correction
 					with runStatusLock:
 						runStatus = "Start"
 
 				elif(cmd.group() == "Quit:"):
-					print "Quitting..."
+					print "Quitting..."					# Exit the progrma
 					self._stop.set()
 					with runStatusLock:
 						runStatus = "Quit"
+
+				elif(cmd.group() == "Help:"):
+					print "Valid Entries Are \t'Pyaw:#.##'\n\t\t\t'Iyaw:#.##'\n\t\t\t'Dyaw:#.##'"		# Print the command list on help call
+					print "\t\t\t'Ppitch:#.##'\n\t\t\t'Ipitch:#.##'\n\t\t\t'Dpitch:#.##'"
+					print "\t\t\t'Proll:#.##'\n\t\t\t'Iroll:#.##'\n\t\t\t'Droll:#.##'"
+					print "\t\t\t'Rotate: yaw,pitch,roll' in Degrees #.##"
+					print "\t\t\t'HoldPos:'"\n\t\t\t'Stop:'\n\t\t\t'Start:'"
+					print "\t\t\t'Help:'\n\t\t\t'Quit:'"
 
 				elif(cmd.group() == "Pyaw:"):
 					match = regex_val_float.search(input)
@@ -171,17 +180,9 @@ class userInputThread(threading.Thread):
 						print "Invalid Value for 'Rotate:'"
 
 				else:
-					print "Valid Entries Are \t'P:#.##'\n\t\t\t'I:#.##'"	# Print out the user input command list on failed parse
-					print "\t\t\t'D:#.##'\n\t\t\t'HoldPos:'"
-					print "\t\t\t'Rotate: yaw,pitch,roll' in Degrees #.##"
-					print "\t\t\t'Stop:'\n\t\t\t'Start:'"
-					print "\t\t\t'Quit:'"
+					pass
 			else:
-				print "Valid Entries Are \t'P:#.##'\n\t\t\t'I:#.##'"	# Print out the user input command list on failed parse
-				print "\t\t\t'D:#.##'\n\t\t\t'HoldPos:'"
-				print "\t\t\t'Rotate: yaw,pitch,roll' in Degrees #.##"
-				print "\t\t\t'Stop:'\n\t\t\t'Start:'"
-				print "\t\t\t'Quit:'"
+				pass
 
     def stop(self):             # An internal setter function for the Stop flag
         self._stop.set()
@@ -215,7 +216,7 @@ class updateControlSystemThread(threading.Thread):
                             runStatus = "Quit"
 
             with controlSystemLock:
-                ControlSystemWrapper.update_gains([0,0,0], [0,0,0], [0,0,0])				# On quit set the gains to zero
+                ControlSystemWrapper.update_gains([0,0,0], [0,0,0], [0,0,0])				# On quit or stop set the gains to zero
         print "Exiting Cntrl\n"
 
     def stop(self):
