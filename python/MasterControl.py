@@ -4,6 +4,7 @@ import DataPortal as DataCom
 import threading 
 import time
 import re
+import os
 
 """
     This thread class handles all user inputs and alters a global status variable to alter program flow and
@@ -158,13 +159,13 @@ class userInputThread(threading.Thread):
 					match = regex_three_floats.search(input)
 					if match:
 						(str1,str2,str3) = match.groups()							# Get all the matched substrings 
-						(yaw,pitch,roll) = (float(str1),float(str2),float(str3))	# Convert to floats
-						print "Will rotate by... yaw: ",yaw," ,pitch: ",pitch," ,roll: ",roll
+						(pitch,yaw, roll) = (float(str1),float(str2),float(str3))	# Convert to floats
+						print "Will rotate by... pitch: ",pitch," ,yaw: ",yaw," ,roll: ",roll
 						confirmation = raw_input("Proceed? 'y'/'n'")
 						if confirmation == "y":										# Get confirmation of rotation to avoid disaster
 							print "Confirmed"
 							with controlSystemLock:
-								ControlSystemWrapper.rotate_current_position(yaw,pitch,roll)	# Adjust the goal position after aquiring lock
+								ControlSystemWrapper.rotate_current_position(pitch,yaw,roll)	# Adjust the goal position after aquiring lock
 						else:
 							print "Canceled"
 					else:
@@ -191,35 +192,36 @@ class userInputThread(threading.Thread):
 	This thread class handles updating the control system via the C control system library at the set, global refreshRate
 """
 class updateControlSystemThread(threading.Thread):
-    def __init__(self,):
-        threading.Thread.__init__(self)
-        self._stop = threading.Event()
+	def __init__(self,):
+		threading.Thread.__init__(self)
+		self._stop = threading.Event()
     
-    def run(self):
-        global runStatus, errx,erry,errz
-        global runStatusLock, controlSystemLock
-        print "Starting Cntrl\n"
-        startTime = 0
-        status = 0
-        while not (runStatus == "Quit" and self._stop.isSet()):
-            with controlSystemLock:								
-                ControlSystemWrapper.update_gains(p,i,d)				# Ensure the gains are intialized before starting
+	def run(self):
+		global runStatus, errx,erry,errz
+		global runStatusLock, controlSystemLock
+		print "Starting Cntrl\n"
+		startTime = 0
+		status = 0
+		while not (runStatus == "Quit" and self._stop.isSet()):
+			with controlSystemLock:								
+				ControlSystemWrapper.update_gains(p,i,d)				# Ensure the gains are intialized before starting
 
-            while (runStatus == "Start") and (time.time() - startTime > 1/refreshRate) and not(self._stop.isSet()):
-                startTime = time.time()
-                with controlSystemLock:
-                    status = ControlSystemWrapper.control_system_update()		# Trigger a control system update and get the current error values
-                    if status == -1:
-                        print "Control System Init Error\n"				# The control system was not intialized properly for an unknown reason						
-                        with runStatusLock:
-                            runStatus = "Quit"
+			while (runStatus == "Start") and (time.time() - startTime > 1/refreshRate) and not(self._stop.isSet()):
+				startTime = time.time()
+				with controlSystemLock:
+					status = ControlSystemWrapper.control_system_update()		# Trigger a control system update and get the current error values
+					if status == -1:
+						print "Control System Init Error\n"				# The control system was not intialized properly for an unknown reason						
+						with runStatusLock:
+							runStatus = "Quit"
+			#print "im here"
+			with controlSystemLock:
+				ControlSystemWrapper.update_gains([0,0,0], [0,0,0], [0,0,0])				# On quit set the gains to zero
+				ControlSystemWrapper.control_system_update()
+		print "Exiting Cntrl\n"
 
-            with controlSystemLock:
-                ControlSystemWrapper.update_gains([0,0,0], [0,0,0], [0,0,0])				# On quit set the gains to zero
-        print "Exiting Cntrl\n"
-
-    def stop(self):
-        self._stop.set()
+	def stop(self):
+		self._stop.set()
 """----------------------------------------------------------------------------------"""
 """
 	Image Capture Yet to be Implimented
@@ -295,14 +297,24 @@ while not(runStatus == "Quit"):
 	else:
 		time.sleep(0.008)	# Sleep for just under 1/100th of a second to save processor power but not stall DataCom transmissions
 
+#Quit All threads NOW!!!!
+
 if DataCom:
 	DataCom.shutDownPortal()
-if ui.isAlive():
-    ui.stop()
-    ui.join()
 if controlSystem.isAlive():
-    controlSystem.stop()
-    controlSystem.join()
+	controlSystem.stop()
+	controlSystem.join()
+if ui.isAlive():
+	ui.stop()
+	ui.join()
 
+print controlSystem.isAlive()
+print ui.isAlive()
+print DataCom.portalIsAlive()
+
+try:
+	os._exit(1)
+except:
+	print "Exit Failed"
 """----------------------------------------------------------------------------------"""
 

@@ -130,15 +130,15 @@ int control_system_update()
 		
 		/* Update Servos
 		 * X is yaw
-		 * Y is roll
-		 * Z is pitch */
+		 * Y is pitch
+		 * Z is roll*/
 		 
 		double error_vect[3];
 		double rate_vect[3];
 		
-		error_vect[0] = zerr;
+		error_vect[0] = yerr;
 		error_vect[1] = -xerr;
-		error_vect[2] = yerr;
+		error_vect[2] = zerr;
 		
 		rate_vect[0] = rates[3]; 
 		rate_vect[1] = -rates[1]; 
@@ -161,6 +161,8 @@ int control_system_init()
 {
 	//----------------------------------------------------------------------//
 	//	INITIALIZE PORT REGISTERS	//
+	
+	printf("Hey im initialized\n");
 	
 	void *virtual_base;
 	int fd;	
@@ -228,7 +230,7 @@ int control_system_init()
 	//	ADDITIONAL MEMORY MAPPING	//
 	
 	/* INITIALIZE SPI */
-	SPI_Init(virtual_base, 1, 5);
+	SPI_Init(virtual_base, 0, 5);
 	
 	/* SETUP SERVOS */
 	
@@ -281,23 +283,43 @@ void rotate_current_position(float pitch, float yaw, float roll)
 	float pitch_rad 	= (pitch * PI)/180;
 	float roll_rad 		= (roll * PI)/180;
 	float yaw_rad 	= (yaw * PI)/180;
-
-	quaternion qrot_pitch  	= {.q0 = cos(pitch_rad/2), .q1 = 0, .q2 = 0, .q3 = sin(pitch_rad/2)};
-	quaternion qrot_roll 		= {.q0 = cos(roll_rad/2), .q1 = 0, .q2 = sin(roll_rad/2), .q3 = 0};
-	quaternion qrot_yaw 		= {.q0 = cos(yaw_rad/2), .q1 = sin(yaw_rad/2), .q2 = 0, .q3 = 0};
 	
-	quaternion qrot_res 		= quatMult(qrot_pitch, qrot_roll);
-	qrot_res						= quatMult(qrot_res, qrot_yaw);
+	printf("Rotating with inputs: pitch:%f yaw:%f roll:%f\n", pitch, yaw, roll);
+	printf("Original Quat: %f %f %f %f\n", reference.q0, reference.q1, reference.q2, reference.q3);
 	
-	qrot_res = quatNorm(qrot_res);
+	//quaternion qrot_pitch  	= {.q0 = cos(pitch_rad/2), .q1 = 0, .q2 = 0, .q3 = sin(pitch_rad/2)};
+	//quaternion qrot_yaw 		= {.q0 = cos(yaw_rad/2), .q1 = sin(yaw_rad/2), .q2 = 0, .q3 = 0};
+	//quaternion qrot_roll 		= {.q0 = cos(roll_rad/2), .q1 = 0, .q2 = sin(roll_rad/2), .q3 = 0};
 	
-	qrot_res = quatMult(qrot_res, reference);
+	//printf("Quat Pitch: %f %f %f %f\n", qrot_pitch.q0, qrot_pitch.q1, qrot_pitch.q2, qrot_pitch.q3);
+	//printf("Quat Yaw: %f %f %f %f\n", qrot_yaw.q0, qrot_yaw.q1, qrot_yaw.q2, qrot_yaw.q3);
+	//printf("Quat Roll: %f %f %f %f\n", qrot_roll .q0, qrot_roll .q1, qrot_roll .q2, qrot_roll .q3);
+	
+	float c1 = cos(yaw_rad/2.0);
+	float c2 = cos(pitch_rad/2.0);
+	float c3 = cos(roll_rad/2.0);
+	
+	float s1 = sin(yaw_rad/2.0);
+	float s2 = sin(pitch_rad/2.0);
+	float s3 = sin(roll_rad/2.0);
+	
+	float res_q0 = sqrt(1.0 + c1 *c2 + c1 * c3 - s1 * s2 *s3 + c2 * c3)/2.0;
+	float res_q1 = (c2 * s3 + c1 * s3 + s1 * s2 * c3)/(4.0 * res_q0);
+	float res_q2 = (s1 * c2 + s1 * c3 + c1 * s2 * s3)/(4.0 * res_q0);
+	float res_q3 = (-s1 * s3 + c1 * s2 * c3 + s2)/(4.0* res_q0);
+	
+	quaternion qrot_res 		= {.q0 = res_q0, .q1 = res_q1, .q2 = res_q2, .q3 = res_q3};
+	printf("Quat Rot_Res: %f %f %f %f\n", qrot_res.q0, qrot_res.q1, qrot_res.q2, qrot_res.q3);
 	
 	quaternion qrot_res_conj = quatConj(qrot_res);
+	printf("Quat Rot_Res_conj: %f %f %f %f\n", qrot_res_conj.q0, qrot_res_conj.q1, qrot_res_conj.q2, qrot_res_conj.q3);
 	
-	qrot_res = quatMult(qrot_res, qrot_res_conj);
+	quaternion firstMult = quatMult(reference, qrot_res);
+	quaternion secondMult = quatMult(firstMult, qrot_res_conj);
+
+	reference = quatNorm(secondMult);
 	
-	reference = qrot_res;
+	printf("New Quat: %f %f %f %f\n", reference.q0, reference.q1, reference.q2, reference.q3);
 }
 
 void update_gains(float P_pitch, float P_yaw, float P_roll, float I_pitch, float I_yaw, float I_roll,  float D_pitch, float D_yaw, float D_roll)
@@ -325,10 +347,14 @@ void pid_loop(double error[], double rates[], float time_step)
 	
 	int axis;
 	for(axis= 0; axis< 3; axis++){
-		integral_error[axis] += error[axis] * time_step;
-		//derivative_error[axis] =  (error[axis] - last_error[axis])/time_step;
+		if(I[axis] == 0.0){
+			integral_error[axis] = 0;
+		} else {
+			integral_error[axis] += error[axis] * time_step;
+		}
+		derivative_error[axis] =  (error[axis] - last_error[axis])/time_step;
 	
-		servo_output[axis] = P[axis] * error[axis] + I[axis] * integral_error[axis] + D[axis] * rates[axis];
+		servo_output[axis] = P[axis] * error[axis] + I[axis] * integral_error[axis] - D[axis] * derivative_error[axis];
 		
 		last_error[axis] = error[axis];
 	}
@@ -483,5 +509,7 @@ void update_servos(double Pitch, double Yaw, double Roll)
 	} else{
 		counter++;
 	}
+	
+	//printf("Hey im alive");
     
 }

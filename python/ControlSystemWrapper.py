@@ -24,7 +24,7 @@ def set_as_current_position():
 
 def rotate_current_position(pitch, yaw, roll):
 	global _controlSystem
-	_controlSystem.rotate_current_position(ctypes.c_float(yaw),ctypes.c_float(pitch),ctypes.c_float(roll))
+	_controlSystem.rotate_current_position(ctypes.c_float(pitch),ctypes.c_float(yaw),ctypes.c_float(roll))
 
 def update_gains(p, i, d):
 	global _controlSystem

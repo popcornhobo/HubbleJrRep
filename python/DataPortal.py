@@ -71,8 +71,12 @@ def dataStatus():					# Returns -1 if the receiver has yet to receive a packet s
 
 def shutDownPortal():
 	global receiver
-	comSocket.close()
+	#comSocket.close()
 	receiver.stop()
+
+def portalIsAlive():
+	global receiver
+	return receiver.isAlive()
 
 def getDataBuffer():
 	return receiver.dataBytes
@@ -121,7 +125,7 @@ def portalInit(IP,hostIP,outPort,inPort):
 
 	comSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)	# Allow a bidirectional socket
 	comSocket.setblocking(1)											# Block on socket commands
-	comSocket.settimeout(0)											# Exert socket.timeout never
+	comSocket.settimeout(None)										# Exert socket.timeout never
 
 	try:
 		comSocket.bind((UDP_HOSTIP,UDP_INPUT_PORT))		# Bind socket to the port and IP

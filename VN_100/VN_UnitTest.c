@@ -71,7 +71,7 @@ int main() {
 	
 	
 	/* INITIALIZE SPI */
-	SPI_Init(virtual_base, 1, 5);
+	SPI_Init(virtual_base, 0, 100);
 	
 	usleep(1000 *1000);
 	
