@@ -99,26 +99,29 @@ int control_system_update()
 		quaternion qerr;
 
 		VN100_SPI_GetQuatRates(sensorID, q, rates);
-		quaternion qpos = {.q0 = q[0], .q1 = q[1], .q2 = q[2], .q3 = q[3]};
+		quaternion qpos = {.q0 = q[3], .q1 = q[0], .q2 = q[1], .q3 = q[2]};
 		quaternion qref = {.q0 = reference.q0, .q1 = reference.q1, .q2 = reference.q2, .q3 = reference.q3};
 
 		/*
 		*	Normalize position and reference Quaternion before calculating the Quaternion
 		*	error.
 		*/
-		// Normalize the quaternions
 		qpos = quatNorm(qpos);
 		qref = quatNorm(qref);
-		// Calculate the quaternion error
-		qerr = quatMult(qpos, quatConj(qref));
-		// The quaternion error needs to be adjusted to represent the shortest path
+		qerr = quatMult(qpos, quatConj(qref));	// Calculate the quaternion error
 		
+		if (qerr.q0 <0)
+		{
+			qerr = quatConj(qerr);	// The quaternion error needs to be adjusted to represent the shortest path
+		}
 		//printf("Quaternion Error: Q0:%lf   Q1:%lf   Q2:%lf   Q3:%lf\n", qerr.q0, qerr.q1, qerr.q2, qerr.q3);
 		
-		// The three imaginary components now represent the per-axis errors of the system
-		xerr = qerr.q1*qerr.q0;
-		yerr = qerr.q2*qerr.q0;
-		zerr = qerr.q3*qerr.q0;
+		/*
+		* The three imaginary components i,j,k now represent the per-axis errors of the system
+		*/ 
+		xerr = qerr.q1; !!!experimentally determine this order!!!
+		yerr = qerr.q2;
+		zerr = qerr.q3;
 
 		// Set the error values to be sent via UDP to a laptop
 		//*xerrOut = xerr;
@@ -131,13 +134,14 @@ int control_system_update()
 		/* Update Servos
 		 * X is yaw
 		 * Y is pitch
-		 * Z is roll*/
+		 * Z is roll
+		 */
 		 
 		double error_vect[3];
 		double rate_vect[3];
 		
 		error_vect[0] = yerr;
-		error_vect[1] = -xerr;
+		error_vect[1] = -xerr;	!!!Make sure this is correct!!!
 		error_vect[2] = zerr;
 		
 		rate_vect[0] = rates[3]; 
@@ -175,19 +179,19 @@ int control_system_init()
 	virtual_base = mmap( NULL, HW_REGS_SPAN, ( PROT_READ | PROT_WRITE ), MAP_SHARED, fd, HW_REGS_BASE );
 	
 	/* Pitch Servo  */
-	pitch_servo_set_rate     	= virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + PITCH_SERVO_SET_RATE_ADDR ) & ( unsigned long)( HW_REGS_MASK ));
-	pitch_servo_set_pos 		= virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + PITCH_SERVO_SET_POS_ADDR ) & ( unsigned long)( HW_REGS_MASK ));
-	pitch_servo_set_ccw 		= virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + PITCH_SERVO_SET_CCW_ADDR ) & ( unsigned long)( HW_REGS_MASK ));
+	pitch_servo_set_rate    = virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + PITCH_SERVO_SET_RATE_ADDR ) & ( unsigned long)( HW_REGS_MASK ));
+	pitch_servo_set_pos 	= virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + PITCH_SERVO_SET_POS_ADDR ) & ( unsigned long)( HW_REGS_MASK ));
+	pitch_servo_set_ccw 	= virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + PITCH_SERVO_SET_CCW_ADDR ) & ( unsigned long)( HW_REGS_MASK ));
 	pitch_servo_set_cw 		= virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + PITCH_SERVO_SET_CW_ADDR ) & ( unsigned long)( HW_REGS_MASK ));
 	
 	pitch_servo_get_error 	= virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + PITCH_SERVO_GET_ERROR_ADDR ) & ( unsigned long)( HW_REGS_MASK ));
 	pitch_servo_get_status 	= virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + PITCH_SERVO_GET_STATUS_ADDR ) & ( unsigned long)( HW_REGS_MASK ));
 	
-	pitch_servo_reset 			= virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + PITCH_SERVO_RESET_ADDR ) & ( unsigned long)( HW_REGS_MASK ));
+	pitch_servo_reset 		= virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + PITCH_SERVO_RESET_ADDR ) & ( unsigned long)( HW_REGS_MASK ));
 	
 	
 	/* Roll Servo  */
-	roll_servo_set_rate     	= virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + ROLL_SERVO_SET_RATE_ADDR ) & ( unsigned long)( HW_REGS_MASK ));
+	roll_servo_set_rate     = virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + ROLL_SERVO_SET_RATE_ADDR ) & ( unsigned long)( HW_REGS_MASK ));
 	roll_servo_set_pos 		= virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + ROLL_SERVO_SET_POS_ADDR ) & ( unsigned long)( HW_REGS_MASK ));
 	roll_servo_set_ccw 		= virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + ROLL_SERVO_SET_CCW_ADDR ) & ( unsigned long)( HW_REGS_MASK ));
 	roll_servo_set_cw 		= virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + ROLL_SERVO_SET_CW_ADDR ) & ( unsigned long)( HW_REGS_MASK ));
@@ -195,7 +199,7 @@ int control_system_init()
 	roll_servo_get_error 	= virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + ROLL_SERVO_GET_ERROR_ADDR ) & ( unsigned long)( HW_REGS_MASK ));
 	roll_servo_get_status 	= virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + ROLL_SERVO_GET_STATUS_ADDR ) & ( unsigned long)( HW_REGS_MASK ));
 	
-	roll_servo_reset 			= virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + ROLL_SERVO_RESET_ADDR ) & ( unsigned long)( HW_REGS_MASK ));
+	roll_servo_reset 		= virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + ROLL_SERVO_RESET_ADDR ) & ( unsigned long)( HW_REGS_MASK ));
 	
 	
 	/* Yaw Servo  */
@@ -207,7 +211,7 @@ int control_system_init()
 	yaw_servo_get_error 	= virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + YAW_SERVO_GET_ERROR_ADDR ) & ( unsigned long)( HW_REGS_MASK ));
 	yaw_servo_get_status 	= virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + YAW_SERVO_GET_STATUS_ADDR ) & ( unsigned long)( HW_REGS_MASK ));
 	
-	yaw_servo_reset 			= virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + YAW_SERVO_RESET_ADDR ) & ( unsigned long)( HW_REGS_MASK ));
+	yaw_servo_reset 		= virtual_base + ((unsigned long )( ALT_LWFPGASLVS_OFST + YAW_SERVO_RESET_ADDR ) & ( unsigned long)( HW_REGS_MASK ));
 	
 	
 	
@@ -267,12 +271,12 @@ void set_as_current_position()
 	// reference = Get_Position_From_VN-100
 	float q[4];
 	float rates[3];
-	VN100_SPI_Packet * ReturnPacket = VN100_SPI_GetQuatRates(sensorID, q, rates);
+	VN100_SPI_Packet * ReturnPacket = VN100_SPI_GetQuatRates(sensorID, q, rates);	// Retrieve the current VN-100 orientation
 	//printf("Return:%u \n", *(uint8_t*)ReturnPacket);
-	reference.q0 = q[0];
-	reference.q1 = q[1];
-	reference.q2 = q[2];
-	reference.q3 = q[3];
+	reference.q0 = q[3];	// Updated the reference quaternion to reflect the current VN-100 position
+	reference.q1 = q[0];
+	reference.q2 = q[1];
+	reference.q3 = q[2];
 	
 	//printf("Position from VN100 q0:%f   q1:%f   q2:%f   q3:%f\n", q[0], q[1], q[2], q[3]);
 	
@@ -280,9 +284,9 @@ void set_as_current_position()
 
 void rotate_current_position(float pitch, float yaw, float roll)
 {
-	float pitch_rad 	= (pitch * PI)/180;
-	float roll_rad 		= (roll * PI)/180;
-	float yaw_rad 	= (yaw * PI)/180;
+	float pitch_rad = (pitch * PI)/180;	// Convert incoming angles to radians
+	float roll_rad = (roll * PI)/180;
+	float yaw_rad = (yaw * PI)/180;
 	
 	printf("Rotating with inputs: pitch:%f yaw:%f roll:%f\n", pitch, yaw, roll);
 	printf("Original Quat: %f %f %f %f\n", reference.q0, reference.q1, reference.q2, reference.q3);
@@ -294,7 +298,10 @@ void rotate_current_position(float pitch, float yaw, float roll)
 	//printf("Quat Pitch: %f %f %f %f\n", qrot_pitch.q0, qrot_pitch.q1, qrot_pitch.q2, qrot_pitch.q3);
 	//printf("Quat Yaw: %f %f %f %f\n", qrot_yaw.q0, qrot_yaw.q1, qrot_yaw.q2, qrot_yaw.q3);
 	//printf("Quat Roll: %f %f %f %f\n", qrot_roll .q0, qrot_roll .q1, qrot_roll .q2, qrot_roll .q3);
-	
+
+	/*
+	*	Calculate the per axis scalar componenets that will make up the rotation quaternion
+	*/
 	float c1 = cos(yaw_rad/2.0);
 	float c2 = cos(pitch_rad/2.0);
 	float c3 = cos(roll_rad/2.0);
@@ -302,22 +309,25 @@ void rotate_current_position(float pitch, float yaw, float roll)
 	float s1 = sin(yaw_rad/2.0);
 	float s2 = sin(pitch_rad/2.0);
 	float s3 = sin(roll_rad/2.0);
-	
+
+	/*
+	* Calculate the quaternion values that correspond to the given relative euler angle rotations
+	*/
 	float res_q0 = sqrt(1.0 + c1 *c2 + c1 * c3 - s1 * s2 *s3 + c2 * c3)/2.0;
 	float res_q1 = (c2 * s3 + c1 * s3 + s1 * s2 * c3)/(4.0 * res_q0);
 	float res_q2 = (s1 * c2 + s1 * c3 + c1 * s2 * s3)/(4.0 * res_q0);
 	float res_q3 = (-s1 * s3 + c1 * s2 * c3 + s2)/(4.0* res_q0);
 	
-	quaternion qrot_res 		= {.q0 = res_q0, .q1 = res_q1, .q2 = res_q2, .q3 = res_q3};
+	quaternion qrot_res = {.q0 = res_q0, .q1 = res_q1, .q2 = res_q2, .q3 = res_q3};	// Create a quaternion object from the calculated pieces
 	printf("Quat Rot_Res: %f %f %f %f\n", qrot_res.q0, qrot_res.q1, qrot_res.q2, qrot_res.q3);
 	
-	quaternion qrot_res_conj = quatConj(qrot_res);
+	quaternion qrot_res_conj = quatConj(qrot_res);	// Create a quaternion object that is the conjugate of the rotation quat
 	printf("Quat Rot_Res_conj: %f %f %f %f\n", qrot_res_conj.q0, qrot_res_conj.q1, qrot_res_conj.q2, qrot_res_conj.q3);
 	
-	quaternion firstMult = quatMult(reference, qrot_res);
-	quaternion secondMult = quatMult(firstMult, qrot_res_conj);
+	quaternion firstMult = quatMult(qrot_res,reference);		// Multiply the rotation quaternion by the reference position
+	quaternion secondMult = quatMult(firstMult, qrot_res_conj);	// Then multiple the result of first mulitply by the conjugate of the rotation quaternion
 
-	reference = quatNorm(secondMult);
+	reference = quatNorm(secondMult);	// The new rotated reference is now assigned to the global reference variable
 	
 	printf("New Quat: %f %f %f %f\n", reference.q0, reference.q1, reference.q2, reference.q3);
 }
