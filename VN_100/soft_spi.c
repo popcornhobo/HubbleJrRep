@@ -99,11 +99,11 @@ uint8_t SPI_Read_Write_Hardware(uint8_t data_out);
 //#define USE_DATA_DELAY_NOP
 //#define USE_SAMPLING
 
-#define CLOCK_DELAY 5
-#define DATA_DELAY 5
+#define CLOCK_DELAY 1
+#define DATA_DELAY 1
 
-#define NOP_CLOCK_DELAY 100
-#define NOP_DATA_DELAY 100
+#define NOP_CLOCK_DELAY 10
+#define NOP_DATA_DELAY 10
 
 #define NUMBER_OF_SAMPLES 3
 #define SAMPLE_DELAY 1
