@@ -45,6 +45,8 @@ class userInputThread(threading.Thread):
 					print "Starting..."					# Allow correction
 					with runStatusLock:
 						runStatus = "Start"
+					with controlSystemLock:
+						ControlSystemWrapper.update_gains([50,50,50],[0,0,0],[0,0,0])
 
 				elif(cmd.group() == "Quit:"):
 					print "Quitting..."					# Exit the progrma
@@ -57,7 +59,7 @@ class userInputThread(threading.Thread):
 					print "\t\t\t'Ppitch:#.##'\n\t\t\t'Ipitch:#.##'\n\t\t\t'Dpitch:#.##'"
 					print "\t\t\t'Proll:#.##'\n\t\t\t'Iroll:#.##'\n\t\t\t'Droll:#.##'"
 					print "\t\t\t'Rotate: yaw,pitch,roll' in Degrees #.##"
-					print "\t\t\t'HoldPos:'"\n\t\t\t'Stop:'\n\t\t\t'Start:'"
+					print "\t\t\t'HoldPos:'\n\t\t\t'Stop:'\n\t\t\t'Start:'"
 					print "\t\t\t'Help:'\n\t\t\t'Quit:'"
 
 				elif(cmd.group() == "Pyaw:"):
@@ -197,33 +199,6 @@ class updateControlSystemThread(threading.Thread):
 		threading.Thread.__init__(self)
 		self._stop = threading.Event()
     
-<<<<<<< HEAD
-    def run(self):
-        global runStatus, errx,erry,errz
-        global runStatusLock, controlSystemLock
-        print "Starting Cntrl\n"
-        startTime = 0
-        status = 0
-        while not (runStatus == "Quit" and self._stop.isSet()):
-            with controlSystemLock:								
-                ControlSystemWrapper.update_gains(p,i,d)				# Ensure the gains are intialized before starting
-
-            while (runStatus == "Start") and (time.time() - startTime > 1/refreshRate) and not(self._stop.isSet()):
-                startTime = time.time()
-                with controlSystemLock:
-                    status = ControlSystemWrapper.control_system_update()		# Trigger a control system update and get the current error values
-                    if status == -1:
-                        print "Control System Init Error\n"				# The control system was not intialized properly for an unknown reason						
-                        with runStatusLock:
-                            runStatus = "Quit"
-
-            with controlSystemLock:
-                ControlSystemWrapper.update_gains([0,0,0], [0,0,0], [0,0,0])				# On quit or stop set the gains to zero
-        print "Exiting Cntrl\n"
-
-    def stop(self):
-        self._stop.set()
-=======
 	def run(self):
 		global runStatus, errx,erry,errz
 		global runStatusLock, controlSystemLock
@@ -250,7 +225,8 @@ class updateControlSystemThread(threading.Thread):
 
 	def stop(self):
 		self._stop.set()
->>>>>>> Development
+
+
 """----------------------------------------------------------------------------------"""
 """
 	Image Capture Yet to be Implimented
