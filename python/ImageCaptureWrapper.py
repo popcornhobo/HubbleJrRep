@@ -11,8 +11,10 @@
 """
 import ctypes
 
+print "in the wrapper"
 _cameraInterface = ctypes.CDLL('ZWO_camera_interface.so')
 
+print "inerface setup"
 _cameraInterface.ZWO_Setup.restype = ctypes.c_int
 
 _cameraInterface.ZWO_Start_Exposure.argtypes = (ctypes.c_int,)
