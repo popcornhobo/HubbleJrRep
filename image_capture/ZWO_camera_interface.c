@@ -110,25 +110,6 @@ int ZWO_End_Exposure(int image_number){
 	name[6] = 'e';
 	name[7] = '_';
 	
-	int i = 8;
-	if((tm.tm_mon + 1) > 9){
-		name[i++] = (tm.tm_mon + 1)/10;
-		name[i++] = (tm.tm_mon  - 9);
-	}else{
-		name[i++] = (tm.tm_mon + 1);
-	}
-	
-	name[i++] = '-';
-	
-	if(tm.tm_mday > 9){
-		name[i++] = (tm.tm_mday /10);
-		name[i++] = (tm.tm_mday  - 10*(tm.tm_mday /10));
-	} else {
-		name[i++] = tm.tm_mday;
-	}
-	
-	name[i++] = '_';
-	
 	name[i++] = (image_number +  48);
 	
 	name[i++] = '.';
