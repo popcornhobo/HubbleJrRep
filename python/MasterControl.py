@@ -1,6 +1,6 @@
 import ControlSystemWrapper
 import DataPortal as DataCom
-#import ImageCaptureWrapper
+import ImageCaptureWrapper as Camera
 import threading 
 import time
 import re
@@ -18,8 +18,8 @@ class userInputThread(threading.Thread):
     def run(self,):
 		global runStatus, runStatusLock
 		global p, i, d, controlSystemLock
-		regex_input = re.compile(r'(\w+)\s*\:\s*(\d*\.*\d*)*\s*')
-		regex_cmd = re.compile(r'(\w+)\s*\:')
+		regex_input = re.compile(r'\s*(\w+)\s*\:\s*(\d*\.*\d*)*\s*')
+		regex_cmd = re.compile(r'\s*(\w+)\s*\:\s*')
 		regex_val_int = re.compile(r'(\d+)')
 		regex_val_float = re.compile(r'(\d+\.*\d*)')
 		regex_three_floats = re.compile(r'(\d+\.*\d*),(\d+\.*\d*),(\d+\.*\d*)')
@@ -234,12 +234,32 @@ class updateControlSystemThread(threading.Thread):
 class captureImage(threading.Thread):
     def __init__(self,):
         threading.Thread.__init__(self)
+        self.exposureTime = 0.05
+        self._stop = threading.Event()
+        self.error = Camera.ZWO_Setup()
+        self.imageNumber = 0
 
     def run(self):
         global captureStart
         print "Starting StrExp\n"
-        #insert call to python wrapper for camera start exposure
+        while not self._stop.isSet():
+        	self.error = Camera.ZWO_Start_Exposure(self.exposureTime)
+        	time.sleep(self.exposureTime)
+        	self.error = Camera.ZWO_Check_Exoposure_Status()
+        	while self.error == 2:
+        		time.sleep(0.01)
+        		self.error = Camera.ZWO_Check_Exoposure_Status()
+        	if self.error == 0:
+        		self.ZWO_End_Exposure(self.imageNumber)
+        		self.imageNumber += 1
+    		elif self.error == 3:
+    			print "Exposure Failed"
+		Camera.ZWO_Stop()
         print "Exiting StrExp\n"
+
+    def stop(self):
+    	self._stop.set()
+
 """----------------------------------------------------------------------------------"""
 """
 	Intialization Section: Used to declare globals, create secondary threads,

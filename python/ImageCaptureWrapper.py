@@ -13,10 +13,9 @@ import ctypes
 
 _cameraInterface = ctypes.CDLL('ZWO_camera_interface.so')
 
-
 _cameraInterface.ZWO_Setup.restype = ctypes.c_int
 
-_cameraInterface.ZWO_Start_Exposure.argtypes = (ctypes.c_int),
+_cameraInterface.ZWO_Start_Exposure.argtypes = (ctypes.c_int,)
 _cameraInterface.ZWO_Start_Exposure.restype = ctypes.c_int
 
 _cameraInterface.ZWO_Check_Exposure_Status.restype = ctypes.c_int

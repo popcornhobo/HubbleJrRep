@@ -49,7 +49,7 @@ int ZWO_Setup(){
 //ZWO_Start_Exposure
 //Starts a camera Exposure and returns an error packet
 int ZWO_Start_Exposure(int desired_exp_time){
-		setValue(CONTROL_EXPOSURE, desired_exp_time, false); //ms//auto
+		setValue(CONTROL_EXPOSURE, desired_exp_time*1000, false); //ms//auto
 		startExposure();
 		return 0;
 }
