@@ -91,7 +91,7 @@ int control_system_update()
 	* Command Servos
 	*/
 	
-	if(isInitialized)
+	if(isInitialized) 
 	{
 		double xerr,yerr,zerr;
 		float q[4];
@@ -99,7 +99,7 @@ int control_system_update()
 		quaternion qerr;
 
 		VN100_SPI_GetQuatRates(sensorID, q, rates);
-		quaternion qpos = {.q0 = q[3], .q1 = q[0], .q2 = q[1], .q3 = q[2]};
+		quaternion qpos = {.q0 = q[0], .q1 = q[1], .q2 = q[2], .q3 = q[3]};
 		quaternion qref = {.q0 = reference.q0, .q1 = reference.q1, .q2 = reference.q2, .q3 = reference.q3};
 
 		/*
@@ -110,25 +110,27 @@ int control_system_update()
 		qref = quatNorm(qref);
 		qerr = quatMult(qpos, quatConj(qref));	// Calculate the quaternion error
 		
+		/*
 		if (qerr.q0 <0)
 		{
 			qerr = quatConj(qerr);	// The quaternion error needs to be adjusted to represent the shortest path
 		}
 		//printf("Quaternion Error: Q0:%lf   Q1:%lf   Q2:%lf   Q3:%lf\n", qerr.q0, qerr.q1, qerr.q2, qerr.q3);
 		
+		*/
 		/*
 		* The three imaginary components i,j,k now represent the per-axis errors of the system
 		*/ 
-		xerr = qerr.q1; !!!experimentally determine this order!!!
+		xerr = qerr.q1; //!!!experimentally determine this order!!!
 		yerr = qerr.q2;
 		zerr = qerr.q3;
-
+		
 		// Set the error values to be sent via UDP to a laptop
 		//*xerrOut = xerr;
 		//*yerrOut = yerr;
 		//*zerrOut = zerr;
 
-		//printf("Error: Xerr:%lf   Yerr:%lf   Zerr:%lf\n", xerr, yerr, zerr);
+		//printf("Error: Xerr:%lf   Yerr:%lf   Zerr:%lf\n\n", xerr, yerr, zerr);
 
 		
 		/* Update Servos
@@ -140,12 +142,12 @@ int control_system_update()
 		double error_vect[3];
 		double rate_vect[3];
 		
-		error_vect[0] = yerr;
-		error_vect[1] = -xerr;	!!!Make sure this is correct!!!
-		error_vect[2] = zerr;
+		error_vect[0] = yerr; //pitch
+		error_vect[1] = -xerr;	//yaw !!!Make sure this is correct!!!
+		error_vect[2] = zerr; //roll 
 		
 		rate_vect[0] = rates[3]; 
-		rate_vect[1] = -rates[1]; 
+		rate_vect[1] = rates[1]; 
 		rate_vect[2] = rates[2]; 
 		 
 		pid_loop(error_vect, rate_vect, time_step_secs);
@@ -273,10 +275,13 @@ void set_as_current_position()
 	float rates[3];
 	VN100_SPI_Packet * ReturnPacket = VN100_SPI_GetQuatRates(sensorID, q, rates);	// Retrieve the current VN-100 orientation
 	//printf("Return:%u \n", *(uint8_t*)ReturnPacket);
-	reference.q0 = q[3];	// Updated the reference quaternion to reflect the current VN-100 position
-	reference.q1 = q[0];
-	reference.q2 = q[1];
-	reference.q3 = q[2];
+	reference.q0 = q[0];	// Updated the reference quaternion to reflect the current VN-100 position
+	reference.q1 = q[1];
+	reference.q2 = q[2];
+	reference.q3 = q[3];
+	
+	reference = quatNorm(reference);
+	
 	
 	//printf("Position from VN100 q0:%f   q1:%f   q2:%f   q3:%f\n", q[0], q[1], q[2], q[3]);
 	
@@ -284,50 +289,61 @@ void set_as_current_position()
 
 void rotate_current_position(float pitch, float yaw, float roll)
 {
-	float pitch_rad = (pitch * PI)/180;	// Convert incoming angles to radians
-	float roll_rad = (roll * PI)/180;
-	float yaw_rad = (yaw * PI)/180;
+	float pitch_rad = (pitch * PI)/180.00;	// Convert incoming angles to radians
+	float roll_rad = (roll * PI)/180.00;
+	float yaw_rad = (yaw * PI)/180.00;
 	
 	printf("Rotating with inputs: pitch:%f yaw:%f roll:%f\n", pitch, yaw, roll);
 	printf("Original Quat: %f %f %f %f\n", reference.q0, reference.q1, reference.q2, reference.q3);
 	
-	//quaternion qrot_pitch  	= {.q0 = cos(pitch_rad/2), .q1 = 0, .q2 = 0, .q3 = sin(pitch_rad/2)};
-	//quaternion qrot_yaw 		= {.q0 = cos(yaw_rad/2), .q1 = sin(yaw_rad/2), .q2 = 0, .q3 = 0};
-	//quaternion qrot_roll 		= {.q0 = cos(roll_rad/2), .q1 = 0, .q2 = sin(roll_rad/2), .q3 = 0};
+	quaternion qrot_pitch  	= {.q0 = cos(pitch_rad/2.0), .q1 = 0, .q2 = 0, .q3 = sin(pitch_rad/2.0)};
 	
-	//printf("Quat Pitch: %f %f %f %f\n", qrot_pitch.q0, qrot_pitch.q1, qrot_pitch.q2, qrot_pitch.q3);
-	//printf("Quat Yaw: %f %f %f %f\n", qrot_yaw.q0, qrot_yaw.q1, qrot_yaw.q2, qrot_yaw.q3);
-	//printf("Quat Roll: %f %f %f %f\n", qrot_roll .q0, qrot_roll .q1, qrot_roll .q2, qrot_roll .q3);
+	quaternion qrot_yaw 	= {.q0 = cos(yaw_rad/2.0), .q1 = sin(yaw_rad/2.0), .q2 = 0, .q3 = 0};
+	
+	quaternion qrot_roll 	= {.q0 = cos(roll_rad/2.0), .q1 = 0, .q2 = sin(roll_rad/2.0), .q3 = 0};
+	
+	printf("Quat Pitch: %f %f %f %f\n", qrot_pitch.q0, qrot_pitch.q1, qrot_pitch.q2, qrot_pitch.q3);
+	printf("Quat Yaw: %f %f %f %f\n", qrot_yaw.q0, qrot_yaw.q1, qrot_yaw.q2, qrot_yaw.q3);
+	printf("Quat Roll: %f %f %f %f\n", qrot_roll .q0, qrot_roll .q1, qrot_roll .q2, qrot_roll .q3);
 
 	/*
 	*	Calculate the per axis scalar componenets that will make up the rotation quaternion
-	*/
+	*//* 
 	float c1 = cos(yaw_rad/2.0);
 	float c2 = cos(pitch_rad/2.0);
 	float c3 = cos(roll_rad/2.0);
 	
 	float s1 = sin(yaw_rad/2.0);
 	float s2 = sin(pitch_rad/2.0);
-	float s3 = sin(roll_rad/2.0);
+	float s3 = sin(roll_rad/2.0); */
 
 	/*
 	* Calculate the quaternion values that correspond to the given relative euler angle rotations
 	*/
-	float res_q0 = sqrt(1.0 + c1 *c2 + c1 * c3 - s1 * s2 *s3 + c2 * c3)/2.0;
+	/* float res_q0 = sqrt(1.0 + c1 *c2 + c1 * c3 - s1 * s2 *s3 + c2 * c3)/2.0;
 	float res_q1 = (c2 * s3 + c1 * s3 + s1 * s2 * c3)/(4.0 * res_q0);
 	float res_q2 = (s1 * c2 + s1 * c3 + c1 * s2 * s3)/(4.0 * res_q0);
-	float res_q3 = (-s1 * s3 + c1 * s2 * c3 + s2)/(4.0* res_q0);
+	float res_q3 = (-s1 * s3 + c1 * s2 * c3 + s2)/(4.0* res_q0); */
+
+	quaternion qrot_pitch_conj = quatConj(qrot_pitch);
+	quaternion qrot_roll_conj = quatConj(qrot_roll);
+	quaternion qrot_yaw_conj = quatConj(qrot_yaw);
 	
-	quaternion qrot_res = {.q0 = res_q0, .q1 = res_q1, .q2 = res_q2, .q3 = res_q3};	// Create a quaternion object from the calculated pieces
+	quaternion qrot_res = quatMult(qrot_pitch, qrot_yaw);
+	qrot_res = quatMult(qrot_roll,qrot_res);// Create a quaternion object from the calculated pieces
+	
+	quaternion qrot_res_conj = quatMult(qrot_pitch_conj, qrot_yaw_conj);
+	qrot_res_conj = quatMult(qrot_roll_conj, qrot_res_conj);// Create a quaternion object from the calculated pieces
+	
 	printf("Quat Rot_Res: %f %f %f %f\n", qrot_res.q0, qrot_res.q1, qrot_res.q2, qrot_res.q3);
 	
-	quaternion qrot_res_conj = quatConj(qrot_res);	// Create a quaternion object that is the conjugate of the rotation quat
+	//quaternion qrot_res_conj = quatConj(qrot_res);	// Create a quaternion object that is the conjugate of the rotation quat
 	printf("Quat Rot_Res_conj: %f %f %f %f\n", qrot_res_conj.q0, qrot_res_conj.q1, qrot_res_conj.q2, qrot_res_conj.q3);
 	
 	quaternion firstMult = quatMult(qrot_res,reference);		// Multiply the rotation quaternion by the reference position
-	quaternion secondMult = quatMult(firstMult, qrot_res_conj);	// Then multiple the result of first mulitply by the conjugate of the rotation quaternion
+	//quaternion secondMult = quatMult(firstMult, qrot_roll_conj);	// Then multiple the result of first mulitply by the conjugate of the rotation quaternion
 
-	reference = quatNorm(secondMult);	// The new rotated reference is now assigned to the global reference variable
+	reference = quatNorm(firstMult);	// The new rotated reference is now assigned to the global reference variable
 	
 	printf("New Quat: %f %f %f %f\n", reference.q0, reference.q1, reference.q2, reference.q3);
 }

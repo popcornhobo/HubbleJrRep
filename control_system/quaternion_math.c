@@ -30,7 +30,7 @@ quaternion quatMult(quaternion p, quaternion q)
 	double dotProd =  (double)p.q0*q.q0 +  (double)p.q1*q.q1 +  (double)p.q2*q.q2 +  (double)p.q3*q.q3;
 
 	quaternion result;
-	result.q0 = (double)p.q0*q.q0 - dotProd;
+	result.q0 = (double)2.0*p.q0*q.q0 - dotProd;
 	result.q1 = p0_q1 + q0_p1 + crossProd_q1;
 	result.q2 = p0_q2 + q0_p2 + crossProd_q2;
 	result.q3 = p0_q3 + q0_p3 + crossProd_q3;
