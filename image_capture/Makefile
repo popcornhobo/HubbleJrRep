@@ -87,12 +87,14 @@ all:test_console test_gui1_video test_gui1_snap test_gui2_snap
 test_console: main_console.cpp
 	$(CC) main_console.cpp -o test_console $(CFLAGS) $(OPENCV) -lASICamera
 	cp test_console bin/$(platform)/
-ZWO_camera_interface.so: 
-	$(CC) -shared -o ZWO_camera_interface.so $(CFLAGS) $(OPENCV) -lASICamera ZWO_camera_interface.c 
+	
+ZWO_camera_interface.so: ZWO_camera_interface.o
+	$(CC) $^ -shared -o $@ $(CFLAGS) $(OPENCV) -lASICamera
 	
 camera: camera.c
-	$(CC) camera.c -o camrea $(CFLAGS) $(OPENCV) -lASICamera
+	$(CC) camera.c -o camera $(CFLAGS) $(OPENCV) -lASICamera
 	cp test_console bin/$(platform)/
+	
 test_gui1_video:main_SDK1_video.cpp
 	$(CC)  main_SDK1_video.cpp -o test_gui1_video $(CFLAGS) $(OPENCV) -lASICamera
 	cp test_gui1_video bin/$(platform)/
@@ -103,6 +105,8 @@ test_gui2_snap:main_SDK2_snap.cpp
 	$(CC)  main_SDK2_snap.cpp -o test_gui2_snap $(CFLAGS) $(OPENCV) -lASICamera2
 	cp test_gui2_snap bin/$(platform)/
 
+%.o : %.c
+	$(CC) $(CFLAGS) -fPIC -c $< -o $@
 
 clean:
 	rm -f test_gui test_console allsky
