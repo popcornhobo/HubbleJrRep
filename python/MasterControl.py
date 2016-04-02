@@ -7,8 +7,8 @@ import re
 import os
 
 """
-    This thread class handles all user inputs and alters a global status variable to alter program flow and
-    ensure all threads are properly terminated.
+    This thread class handles all user inputs and alters a global status variable to alter program flow, adjust 
+    runtime parameters and ensure all threads are properly terminated.
 """
 class userInputThread(threading.Thread):
     def __init__(self,):
@@ -18,12 +18,16 @@ class userInputThread(threading.Thread):
     def run(self,):
 		global runStatus, runStatusLock
 		global p, i, d, controlSystemLock
+		global maxImageCount, exposureTime, captureRate
+
+		# pre-compile all the necessary command-parse regular expressions
 		regex_input = re.compile(r'\s*(\w+)\s*\:\s*(\d*\.*\d*)*\s*')
 		regex_cmd = re.compile(r'\s*(\w+)\s*\:\s*')
 		regex_val_int = re.compile(r'(\d+)')
 		regex_val_float = re.compile(r'(\d+\.*\d*)')
 		regex_three_floats = re.compile(r'(\d+\.*\d*),(\d+\.*\d*),(\d+\.*\d*)')
 
+		# notify the user of available commands
 		print "Valid Entries Are \t'Pyaw:#.##'\n\t\t\t'Iyaw:#.##'\n\t\t\t'Dyaw:#.##'"
 		print "\t\t\t'Ppitch:#.##'\n\t\t\t'Ipitch:#.##'\n\t\t\t'Dpitch:#.##'"
 		print "\t\t\t'Proll:#.##'\n\t\t\t'Iroll:#.##'\n\t\t\t'Droll:#.##'"
@@ -46,7 +50,7 @@ class userInputThread(threading.Thread):
 					with runStatusLock:
 						runStatus = "Start"
 					with controlSystemLock:
-						ControlSystemWrapper.update_gains([50,50,50],[0,0,0],[0,0,0])
+						ControlSystemWrapper.update_gains(p,i,d)
 
 				elif(cmd.group() == "Quit:"):
 					print "Quitting..."					# Exit the progrma
@@ -59,8 +63,16 @@ class userInputThread(threading.Thread):
 					print "\t\t\t'Ppitch:#.##'\n\t\t\t'Ipitch:#.##'\n\t\t\t'Dpitch:#.##'"
 					print "\t\t\t'Proll:#.##'\n\t\t\t'Iroll:#.##'\n\t\t\t'Droll:#.##'"
 					print "\t\t\t'Rotate: yaw,pitch,roll' in Degrees #.##"
+					print "\t\t\t'Capture: ExposureTime,CaptureRate,MaxPics' in Seconds,Seconds,Pics"
 					print "\t\t\t'HoldPos:'\n\t\t\t'Stop:'\n\t\t\t'Start:'"
 					print "\t\t\t'Help:'\n\t\t\t'Quit:'"
+
+				elif(cmd.group() == "Capture:");
+					match = regex_three_floats.search(input)
+					if match:
+						(str1,str2,str3) = match.groups()
+						with cameraParamsLock:
+							(exposureTime,captureRate,maxImageCount) = (float(str1),float(str2),float(str3))
 
 				elif(cmd.group() == "Pyaw:"):
 					match = regex_val_float.search(input)
@@ -170,7 +182,7 @@ class userInputThread(threading.Thread):
 					match = regex_three_floats.search(input)
 					if match:
 						(str1,str2,str3) = match.groups()							# Get all the matched substrings 
-						(pitch,yaw, roll) = (float(str1),float(str2),float(str3))	# Convert to floats
+						(pitch,yaw,roll) = (float(str1),float(str2),float(str3))	# Convert to floats
 						print "Will rotate by... pitch: ",pitch," ,yaw: ",yaw," ,roll: ",roll
 						confirmation = raw_input("Proceed? 'y'/'n'")
 						if confirmation == "y":										# Get confirmation of rotation to avoid disaster
@@ -217,10 +229,10 @@ class updateControlSystemThread(threading.Thread):
 						print "Control System Init Error\n"				# The control system was not intialized properly for an unknown reason						
 						with runStatusLock:
 							runStatus = "Quit"
-			#print "im here"
-			with controlSystemLock:
-				ControlSystemWrapper.update_gains([0,0,0], [0,0,0], [0,0,0])				# On quit set the gains to zero
-				ControlSystemWrapper.control_system_update()
+			if runStatus != "Start":
+				with controlSystemLock:
+					ControlSystemWrapper.update_gains([0,0,0], [0,0,0], [0,0,0])				# On quit set the gains to zero to stop all movement
+					ControlSystemWrapper.control_system_update()
 		print "Exiting Cntrl\n"
 
 	def stop(self):
@@ -234,27 +246,46 @@ class updateControlSystemThread(threading.Thread):
 class captureImage(threading.Thread):
     def __init__(self,):
         threading.Thread.__init__(self)
-        self.exposureTime = 0.05
         self._stop = threading.Event()
         self.error = Camera.ZWO_Setup()
+        if self.error != 0:
+        	print "Error#:",self.error," In Camera Setup"
+        	if self.error == 1:
+        		print"No camera detected"
+    		elif self.error == 2:
+    			print"Couldn't open camera port"
+			elif self.error == 3:
+				print"Couldn't initialize camera"
+			elif self.error == 4:
+				print"Failed to create empty image"
+        	self._stop.set()
         self.imageNumber = 0
 
     def run(self):
-        global captureStart
+        global exposureTime,captureRate,maxImageCount
         print "Starting StrExp\n"
-        while not self._stop.isSet():
-        	self.error = Camera.ZWO_Start_Exposure(self.exposureTime)
-        	time.sleep(self.exposureTime)
-        	self.error = Camera.ZWO_Check_Exoposure_Status()
-        	while self.error == 2:
-        		time.sleep(0.01)
-        		self.error = Camera.ZWO_Check_Exoposure_Status()
-        	if self.error == 0:
-        		self.ZWO_End_Exposure(self.imageNumber)
-        		self.imageNumber += 1
-    		elif self.error == 3:
-    			print "Exposure Failed"
-		Camera.ZWO_Stop()
+        startTime = 0
+        self.imageNumber = 0
+        while not self._stop.isSet() and (self.imageNumber < maxImageCount):	# Stop captureing once thread is called to exit or the image limit is hit
+        	if (time.time() - startTime > captureRate):							# Only capture at the desired capture rate
+	        	self.error = Camera.ZWO_Start_Exposure(exposureTime)			# Start a single exposure
+	        	time.sleep(exposureTime)
+	        	self.error = Camera.ZWO_Check_Exoposure_Status()				# After the exposure time check cam status
+	        	while self.error == 2:	
+	        		time.sleep(0.01)											# While the camera is busy sleep the process
+	        		self.error = Camera.ZWO_Check_Exoposure_Status()
+	        	if self.error == 0:												
+	        		self.error = Camera.ZWO_End_Exposure(self.imageNumber)		# The exposure was succesful attempt to save the image
+	        		if self.error != 1:
+	        			self.imageNumber += 1 									# The save was succesful increment image naming number
+        			else:
+        				print "Image Capture Failed"							# The save failed, alert the user
+	    		elif self.error == 3:
+	    			print "Exposure Failed"										# The exposure failed, alert the user
+	    		startTime = time.time()
+			else:
+				time.sleep(0.1) 		# Try not to bog down the processor waiting until capture time
+		Camera.ZWO_Stop()				# Release the USB resources and shutdown the camera before exiting
         print "Exiting StrExp\n"
 
     def stop(self):
@@ -269,13 +300,12 @@ ui = userInputThread()
 ui.start()
 
 print "UI Thread Started"
-
+# Global Refresh Rate in tics/sec
 refreshRate = 100
-exposureTime = 20
 
 # NOTE! these values should not be written to without the controlSystemLock
 controlSystemLock = threading.Lock()
-p = [0,0,0] 	 # These lists are in Pitch Yaw Roll order
+p = [10,10,10] 	 # These lists are in Pitch Yaw Roll order
 i = [0,0,0]      # It is good form to update p,i,d immediatley before calling update_gains() to limit lock passes
 d = [0,0,0]
 
@@ -289,8 +319,11 @@ runStatusLock = threading.Lock()
 runStatus = "Stop"
 # end NOTE!
 
-threadPool = 3
-curThreadCount = 1
+# NOTE! these values should not be written to without the cameraParamsLock
+exposureTime = 0
+captureRate = 0
+maxImageCount = 0
+# end NOTE!
 
 hostIP = "192.168.1.2"
 udpIP = "192.168.1.1"
