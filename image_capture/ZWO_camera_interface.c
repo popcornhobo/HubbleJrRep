@@ -110,13 +110,13 @@ int ZWO_End_Exposure(int image_number){
 	name[6] = 'e';
 	name[7] = '_';
 	
-	name[i++] = (image_number +  48);
+	name[8] = (image_number +  48);
 	
-	name[i++] = '.';
-	name[i++] = 'j';
-	name[i++] = 'p';
-	name[i++] = 'g';
-	name[i++] = '\0';
+	name[9] = '.';
+	name[10] = 'j';
+	name[11] = 'p';
+	name[12] = 'g';
+	name[13] = '\0';
 	
 	cv::imwrite(name, image);
 	
