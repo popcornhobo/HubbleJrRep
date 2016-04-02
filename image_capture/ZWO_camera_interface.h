@@ -21,6 +21,8 @@
 #include <sys/time.h>
 #include <time.h>
 #include <unistd.h>
+#include <stdlib.h>
+#include <string.h>
 #include "cv.h"
 #include "opencv2/highgui/highgui.hpp"
 
