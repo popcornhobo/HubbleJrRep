@@ -296,11 +296,11 @@ void rotate_current_position(float pitch, float yaw, float roll)
 	printf("Rotating with inputs: pitch:%f yaw:%f roll:%f\n", pitch, yaw, roll);
 	printf("Original Quat: %f %f %f %f\n", reference.q0, reference.q1, reference.q2, reference.q3);
 	
-	quaternion qrot_pitch  	= {.q0 = cos(pitch_rad/2.0), .q1 = 0, .q2 = 0, .q3 = sin(pitch_rad/2.0)};
+	quaternion qrot_roll  	= {.q0 = cos(pitch_rad/2.0), .q1 = 0, .q2 = 0, .q3 = sin(pitch_rad/2.0)};
 	
 	quaternion qrot_yaw 	= {.q0 = cos(yaw_rad/2.0), .q1 = sin(yaw_rad/2.0), .q2 = 0, .q3 = 0};
 	
-	quaternion qrot_roll 	= {.q0 = cos(roll_rad/2.0), .q1 = 0, .q2 = sin(roll_rad/2.0), .q3 = 0};
+	quaternion qrot_pitch 	= {.q0 = cos(roll_rad/2.0), .q1 = 0, .q2 = sin(roll_rad/2.0), .q3 = 0};
 	
 	printf("Quat Pitch: %f %f %f %f\n", qrot_pitch.q0, qrot_pitch.q1, qrot_pitch.q2, qrot_pitch.q3);
 	printf("Quat Yaw: %f %f %f %f\n", qrot_yaw.q0, qrot_yaw.q1, qrot_yaw.q2, qrot_yaw.q3);
@@ -334,14 +334,14 @@ void rotate_current_position(float pitch, float yaw, float roll)
 	
 	quaternion qrot_res_conj = quatMult(qrot_pitch_conj, qrot_yaw_conj);
 	qrot_res_conj = quatMult(qrot_roll_conj, qrot_res_conj);// Create a quaternion object from the calculated pieces
-	
+	printf("Quat Rot_Res_conj1: %f %f %f %f\n", qrot_res_conj.q0, qrot_res_conj.q1, qrot_res_conj.q2, qrot_res_conj.q3);
 	printf("Quat Rot_Res: %f %f %f %f\n", qrot_res.q0, qrot_res.q1, qrot_res.q2, qrot_res.q3);
 	
-	//quaternion qrot_res_conj = quatConj(qrot_res);	// Create a quaternion object that is the conjugate of the rotation quat
+	quaternion qrot_res_conj = quatConj(qrot_res);	// Create a quaternion object that is the conjugate of the rotation quat
 	printf("Quat Rot_Res_conj: %f %f %f %f\n", qrot_res_conj.q0, qrot_res_conj.q1, qrot_res_conj.q2, qrot_res_conj.q3);
 	
 	quaternion firstMult = quatMult(qrot_res,reference);		// Multiply the rotation quaternion by the reference position
-	//quaternion secondMult = quatMult(firstMult, qrot_roll_conj);	// Then multiple the result of first mulitply by the conjugate of the rotation quaternion
+	quaternion secondMult = quatMult(firstMult, qrot_res_conj);	// Then multiple the result of first mulitply by the conjugate of the rotation quaternion
 
 	reference = quatNorm(firstMult);	// The new rotated reference is now assigned to the global reference variable
 	

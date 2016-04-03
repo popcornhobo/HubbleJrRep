@@ -21,11 +21,11 @@ class userInputThread(threading.Thread):
 		global maxImageCount, exposureTime, captureRate
 
 		# pre-compile all the necessary command-parse regular expressions
-		regex_input = re.compile(r'\s*(\w+)\s*\:\s*(\d*\.*\d*)*\s*')
-		regex_cmd = re.compile(r'\s*(\w+)\s*\:\s*')
+		regex_input = re.compile(r'\s*(\w+)\s*\:\s*.*')
+		regex_cmd = re.compile(r'\s*(\w+)\s*\:')
 		regex_val_int = re.compile(r'(\d+)')
 		regex_val_float = re.compile(r'(\d+\.*\d*)')
-		regex_three_floats = re.compile(r'(\d+\.*\d*),(\d+\.*\d*),(\d+\.*\d*)')
+		regex_three_floats = re.compile(r'(\-?\d+\.*\d*),(\-?\d+\.*\d*),(\-?\d+\.*\d*)')
 
 		# notify the user of available commands
 		print "Valid Entries Are \t'Pyaw:#.##'\n\t\t\t'Iyaw:#.##'\n\t\t\t'Dyaw:#.##'"
@@ -195,7 +195,7 @@ class userInputThread(threading.Thread):
 						print "Invalid Value for 'Rotate:'"
 
 				else:
-					pass
+					print"Invalid Command... try 'Help:'"
 			else:
 				pass
 
