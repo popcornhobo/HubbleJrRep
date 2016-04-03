@@ -12,6 +12,9 @@
 
 #include "ZWO_camera_interface.h"
 
+//Global Error
+char error = 0;
+
 int main(int argc, char *argv[]){
 	if(argc != 3){
 		printf("Wrong number of arguments\n");
@@ -30,6 +33,7 @@ int main(int argc, char *argv[]){
 	int expose = 0;	
 	do{
 		expose = ZWO_Check_Exposure_Status();
+		usleep(100);
 	}while(expose == 2);
 
 	ZWO_End_Exposure(imageNumber);
@@ -37,11 +41,10 @@ int main(int argc, char *argv[]){
 	ZWO_Stop();
 	
 	//Write to FIFO
-	FILE * fifo = fopen("Image_Capture.fifo", "w");
-    if(fifo >= 0)
-    {
-		fprintf(fifo, "%d", 1);
-    } else {
+	if(access("Image_Capture.fifo", F_OK ) != -1){
+		FILE * fifo = fopen("Image_Capture.fifo", "w");
+		fprintf(fifo, "%c", error);
+	} else {
 		printf("No FIFO found\n");
 	}
 
@@ -53,21 +56,25 @@ int main(int argc, char *argv[]){
 int ZWO_Setup(){
 	if(getNumberOfConnectedCameras() < 1){
 		printf("No cameras detected\n");
+		error = 1;
 		return 1;
 	}
 	
 	if(!openCamera(CAMERA_NUMBER)){
-		printf("Failed to open camera\n");		
+		printf("Failed to open camera\n");
+		error = 2;
 		return 2;
 	}
 
 	if(!initCamera()){
 		printf("Failed to initialize camera\n");		
+		error = 3;
 		return 3;
 	}	
 	
-	if(!setImageFormat(RESOLUTION_W, RESOLUTION_H, 1, IMG_RAW8)){
+	if(!setImageFormat(RESOLUTION_W, RESOLUTION_H, 1, IMG_RGB24)){
 		printf("Failed to set image format\n");		
+		error = 5;
 		return 5;
 	}
 	
@@ -75,6 +82,7 @@ int ZWO_Setup(){
 	
 	if(pRgb == NULL){
 		printf("Failed to create image\n");		
+		error = 4;
 		return 4;
 	}
 
@@ -104,6 +112,7 @@ int ZWO_Check_Exposure_Status(){
 	{
 		case EXP_IDLE:
 			printf("Camera is idle\n");
+			error = 6;
 			return 1; 
 			break;
 		
@@ -117,10 +126,12 @@ int ZWO_Check_Exposure_Status(){
 		
 		case EXP_FAILED:
 			printf("Exposure Failed\n");
+			error = 7;
 			return 3;
 			break;
 			
 		default:
+			error = 8;
 			return 4;
 	}
 }
@@ -130,6 +141,7 @@ int ZWO_Check_Exposure_Status(){
 int ZWO_End_Exposure(int image_number){
  
 	if(!getImageAfterExp((unsigned char*)pRgb->imageData, pRgb->imageSize)){
+		error = 9;
 		return 1;
 	}
 	

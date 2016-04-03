@@ -242,53 +242,46 @@ class updateControlSystemThread(threading.Thread):
 """
 	Image Capture Yet to be Implimented
 """
-# class captureImage(threading.Thread):
-    # def __init__(self,):
-        # threading.Thread.__init__(self)
-        # self._stop = threading.Event()
-        # self.error = Camera.ZWO_Setup()
-        # if self.error != 0:
-        	# print "Error#:",self.error," In Camera Setup"
-        	# if self.error == 1:
-        		# print"No camera detected"
-    		# elif self.error == 2:
-    			# print"Couldn't open camera port"
-			# elif self.error == 3:
-				# print"Couldn't initialize camera"
-			# elif self.error == 4:
-				# print"Failed to create empty image"
-        	# self._stop.set()
-        # self.imageNumber = 0
+class captureImage(threading.Thread):
+    def __init__(self,):
+		threading.Thread.__init__(self)
+		self._stop = threading.Event()
+		#Setup FIFO Here
+		os.mkfifo("Image_Capture.fifo")
+		self.fifo = open("Image_Capture.fifo", "r")
 
-    # def run(self):
-        # global exposureTime,captureRate,maxImageCount
-        # print "Starting StrExp\n"
-        # startTime = 0
-        # self.imageNumber = 0
-        # while not self._stop.isSet() and (self.imageNumber < maxImageCount):	# Stop captureing once thread is called to exit or the image limit is hit
-        	# if (time.time() - startTime > captureRate):							# Only capture at the desired capture rate
-	        	# self.error = Camera.ZWO_Start_Exposure(exposureTime)			# Start a single exposure
-	        	# time.sleep(exposureTime)
-	        	# self.error = Camera.ZWO_Check_Exoposure_Status()				# After the exposure time check cam status
-	        	# while self.error == 2:	
-	        		# time.sleep(0.01)											# While the camera is busy sleep the process
-	        		# self.error = Camera.ZWO_Check_Exoposure_Status()
-	        	# if self.error == 0:												
-	        		# self.error = Camera.ZWO_End_Exposure(self.imageNumber)		# The exposure was succesful attempt to save the image
-	        		# if self.error != 1:
-	        			# self.imageNumber += 1 									# The save was succesful increment image naming number
-        			# else:
-        				# print "Image Capture Failed"							# The save failed, alert the user
-	    		# elif self.error == 3:
-	    			# print "Exposure Failed"										# The exposure failed, alert the user
-	    		# startTime = time.time()
-			# else:
-				# time.sleep(0.1) 		# Try not to bog down the processor waiting until capture time
-		# Camera.ZWO_Stop()				# Release the USB resources and shutdown the camera before exiting
-        # print "Exiting StrExp\n"
+	def run(self):
+        global exposureTime,captureRate,maxImageCount
+		print "Starting StrExp\n"
+        startTime = 0
+        self.imageNumber = 0
+        while not self._stop.isSet() and (self.imageNumber < maxImageCount):	# Stop captureing once thread is called to exit or the image limit is hit
+        	if (time.time() - startTime > captureRate):							# Only capture at the desired capture rate
+	        	#Capture an image here
+				os.system("./camera_capture " + self.exposureTime + " " + self.imageNumber)
+				
+				#Wait for return byte
+				while True:
+					byte = fifo.read(1)
+					if not byte:
+						time.sleep(0.1)
+						continue
+					else:
+						print "Capture Complete with error code " + chr(byte)
+						break
+				
+			else:
+				time.sleep(0.1) 		# Try not to bog down the processor waiting until capture time
+		#Close FIFO
+		fifo.close()
+		
+        print "Exiting StrExp\n"
 
-    # def stop(self):
-    	# self._stop.set()
+    def stop(self):
+		#Ensure that FIFO is closed
+		try:
+			fifo.close()
+    	self._stop.set()
 
 """----------------------------------------------------------------------------------"""
 """
