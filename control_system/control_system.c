@@ -241,26 +241,41 @@ int control_system_init()
 	/* SETUP SERVOS */
 	
 	#ifdef USE_PITCH_JOINT_MODE
-		*(uint32_t *)pitch_servo_set_ccw = 1024;
-		*(uint32_t *)pitch_servo_set_cw = 0;
+		usleep(2000);
+		*(uint32_t *)pitch_servo_set_ccw = PITCH_CCW_LIMIT;
+		usleep(2000);
+		printf("Pitch CCW Error: %d\n", *(uint32_t *)pitch_servo_get_error);
 		
-		*(uint32_t *)pitch_servo_set_rate =  RESET_SPEED;
-		*(uint32_t *)pitch_servo_set_pos = 512;
+		
+		*(uint32_t *)pitch_servo_set_cw = PITCH_CW_LIMIT;
+		usleep(2000);
+		printf("Pitch CW Error: %d\n", *(uint32_t *)pitch_servo_get_error);
+		
+		//*(uint32_t *)pitch_servo_set_rate =  RESET_SPEED;
+		//*(uint32_t *)pitch_servo_set_pos = 512;
 	#else
+		usleep(2000);
 		*(uint32_t *)pitch_servo_set_ccw = 0;
+		usleep(2000);
 		*(uint32_t *)pitch_servo_set_cw = 0;
+		usleep(2000);
 	#endif
 	
 	
 	#ifdef USE_ROLL_JOINT_MODE
-		*(uint32_t *)roll_servo_set_ccw = 1024;
-		*(uint32_t *)roll_servo_set_cw = 0;
-		
-		*(uint32_t *)roll_servo_set_rate =  RESET_SPEED;
-		*(uint32_t *)roll_servo_set_pos = 512;
+		usleep(2000);
+		*(uint32_t *)roll_servo_set_ccw = ROLL_CCW_LIMIT;
+		usleep(2000);
+		*(uint32_t *)roll_servo_set_cw = ROLL_CW_LIMIT;
+		usleep(2000);
+		//*(uint32_t *)roll_servo_set_rate =  RESET_SPEED;
+		//*(uint32_t *)roll_servo_set_pos = 512;
 	#else
+		usleep(2000);
 		*(uint32_t *)roll_servo_set_ccw = 0;
+		usleep(2000);
 		*(uint32_t *)roll_servo_set_cw = 0;
+		usleep(2000);
 	#endif
 	
 	isInitialized = True;
@@ -413,11 +428,11 @@ void update_servos(double Pitch, double Yaw, double Roll)
 			/* Update Pitch */
 			if (Pitch < 0)
 			{
-				*(uint32_t *) pitch_servo_set_pos = 0;
+				*(uint32_t *) pitch_servo_set_pos = PITCH_CW_LIMIT;
 			}
 			else
 			{
-				*(uint32_t *) pitch_servo_set_pos = 1024;
+				*(uint32_t *) pitch_servo_set_pos = PITCH_CCW_LIMIT;
 			}
 			
 			/* Abs Roll */
@@ -481,11 +496,11 @@ void update_servos(double Pitch, double Yaw, double Roll)
 			/* Update Roll */
 			if (Roll < 0)
 			{
-				*(uint32_t *) roll_servo_set_pos = 0;
+				*(uint32_t *) roll_servo_set_pos = ROLL_CW_LIMIT;
 			}
 			else
 			{
-				*(uint32_t *) roll_servo_set_pos = 1024;
+				*(uint32_t *) roll_servo_set_pos = ROLL_CCW_LIMIT;
 			}
 			
 			/* Abs Roll */
