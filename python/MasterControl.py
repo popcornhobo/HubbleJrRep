@@ -243,51 +243,75 @@ class updateControlSystemThread(threading.Thread):
 	Image Capture Yet to be Implimented
 """
 class captureImage(threading.Thread):
-    def __init__(self,):
+	def __init__(self,):
 		threading.Thread.__init__(self)
 		self._stop = threading.Event()
 		#Setup FIFO Here
-		os.mkfifo("Image_Capture.fifo")
-		self.fifo = open("Image_Capture.fifo", "r")
-
+		try:
+			os.mkfifo("Image_Capture.fifo")
+		except:
+			os.system("rm Image_Capture.fifo")
+			os.mkfifo("Image_Capture.fifo")
+		
+		self.fifo = open("Image_Capture.fifo", "r+")
+	
 	def run(self):
-        global exposureTime,captureRate,maxImageCount
+		global exposureTime,captureRate,maxImageCount
 		print "Starting StrExp\n"
-        startTime = 0
-        self.imageNumber = 0
-        while not self._stop.isSet() and (self.imageNumber < maxImageCount):	# Stop captureing once thread is called to exit or the image limit is hit
-        	if (time.time() - startTime > captureRate):							# Only capture at the desired capture rate
-	        	#Capture an image here
-				os.system("./camera_capture " + self.exposureTime + " " + self.imageNumber)
+		startTime = 0
+		self.imageNumber = 0
+		while (not self._stop.isSet()) and (self.imageNumber < maxImageCount):	# Stop captureing once thread is called to exit or the image limit is hit
+			if (time.time() - startTime > captureRate):							# Only capture at the desired capture rate
+				#Capture an image here
+				print "Image Taken"
+				os.system("./camera_capture " + str(exposureTime) + " " + str(self.imageNumber))
 				
 				#Wait for return byte
 				while True:
-					byte = fifo.read(1)
+					byte = self.fifo.read(1)
 					if not byte:
 						time.sleep(0.1)
 						continue
 					else:
-						print "Capture Complete with error code " + chr(byte)
+						print "Capture Complete with error code " + byte
+						self.imageNumber += 1
 						break
 				
 			else:
 				time.sleep(0.1) 		# Try not to bog down the processor waiting until capture time
-		#Close FIFO
-		fifo.close()
 		
-        print "Exiting StrExp\n"
-
-    def stop(self):
-		#Ensure that FIFO is closed
-		try:
-			fifo.close()
-    	self._stop.set()
+		print "Exiting StrExp\n"
+	
+	def stop(self):
+		fifo.close()
+		self._stop.set()
 
 """----------------------------------------------------------------------------------"""
 """
 	Intialization Section: Used to declare globals, create secondary threads,
 	and start the low level systems
 """
+# def simpleImageCaptureTest():
+	# print "Starting"
+	# os.mkfifo("Image_Capture.fifo")
+	# fifo = open("Image_Capture.fifo", "r+")
+	
+	# #Capture an image here
+	# print "Image Taken"
+	# os.system("./camera_capture 250 1")
+	
+	# #Wait for return byte
+	# while True:
+		# byte = fifo.read(1)
+		# if not byte:
+			# time.sleep(0.1)
+			# continue
+		# else:
+			# print "Capture Complete with error code " + byte
+			# break
+
+#simpleImageCaptureTest()
+
 ui = userInputThread()
 ui.start()
 
@@ -312,10 +336,13 @@ runStatus = "Stop"
 # end NOTE!
 
 # NOTE! these values should not be written to without the cameraParamsLock
-exposureTime = 0
-captureRate = 0
-maxImageCount = 0
+exposureTime = 250
+captureRate = 10
+maxImageCount = 5
 # end NOTE!
+
+imCap = captureImage()
+imCap.start()
 
 hostIP = "192.168.1.2"
 udpIP = "192.168.1.1"
@@ -357,6 +384,12 @@ if controlSystem.isAlive():
 if ui.isAlive():
 	ui.stop()
 	ui.join()
+if imCap.isAlive():
+	imCap.stop()
+	imCap.join()
+
+#remove the fifo
+os.system("rm Image_Capture.fifo")
 
 print controlSystem.isAlive()
 print ui.isAlive()
