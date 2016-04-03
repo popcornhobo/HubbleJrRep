@@ -17,7 +17,7 @@ LIBSPATH = -L../lib/$(platform) -I../include
 
 ifeq ($(ver), debug)
 DEFS = -D_LIN -D_DEBUG 
-CFLAGS = -g  -I $(INCLIB) -L $(LDLIB) $(DEFS) $(COMMON) $(LIBSPATH)  -lpthread  $(USB) -DGLIBC_20
+CFLAGS = -g  -I $(INCLIB) -L $(LDLIB) $(DEFS) $(COMMON) $(LIBSPATH) -lpthread  $(USB) -DGLIBC_20
 else
 DEFS = -D_LIN 
 CFLAGS =  -O3 -I $(INCLIB) -L $(LDLIB) $(DEFS) $(COMMON) $(LIBSPATH)  -lpthread  $(USB) -DGLIBC_20
@@ -88,15 +88,18 @@ test_console: main_console.cpp
 	$(CC) main_console.cpp -o test_console $(CFLAGS) $(OPENCV) -lASICamera
 	cp test_console bin/$(platform)/
 	
-ZWO_camera_interface.so: ZWO_camera_interface.o
-	$(CC) $^ -shared -o $@ $(CFLAGS) $(OPENCV) -lASICamera
+libZWO_camera_interface.so: ZWO_camera_interface.o
+	$(CC) -shared -o $@ $^ $(CFLAGS) $(OPENCV) -lASICamera
 
 ZWO_camera_interface.o: ZWO_camera_interface.c
-	$(CC) $(CFLAGS) -c -fPIC $< -o $@ $(OPENCV) -lASICamera
+	$(CC) $(CFLAGS) -c -fPIC -Wall $< -o $@ $(OPENCV) -lASICamera
 	
 camera: camera.c
 	$(CC) camera.c -o camera $(CFLAGS) $(OPENCV) -lASICamera
 	cp test_console bin/$(platform)/
+
+camera_capture: ZWO_camera_interface.c
+	$(CC) ZWO_camera_interface.c -o camera_capture $(CFLAGS) $(OPENCV) -lASICamera
 	
 test_gui1_video:main_SDK1_video.cpp
 	$(CC)  main_SDK1_video.cpp -o test_gui1_video $(CFLAGS) $(OPENCV) -lASICamera

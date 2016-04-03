@@ -45,7 +45,7 @@ int main(int argc, char *argv[]){
 		FILE * fifo = fopen("Image_Capture.fifo", "w");
 		fprintf(fifo, "%c", error);
 	} else {
-		printf("No FIFO found\n");
+		printf("No FIFO found...\n");
 	}
 
 	return 0;
@@ -78,7 +78,7 @@ int ZWO_Setup(){
 		return 5;
 	}
 	
-	pRgb=cvCreateImage(cvSize(RESOLUTION_W, RESOLUTION_H), IPL_DEPTH_8U, 1);
+	pRgb=cvCreateImage(cvSize(RESOLUTION_W, RESOLUTION_H), IPL_DEPTH_8U, 3);
 	
 	if(pRgb == NULL){
 		printf("Failed to create image\n");		
