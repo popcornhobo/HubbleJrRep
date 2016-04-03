@@ -12,28 +12,69 @@
 
 #include "ZWO_camera_interface.h"
 
+int main(int argc, char *argv[]){
+	if(argc != 3){
+		printf("Wrong number of arguments\n");
+		return -1;
+	}
+	
+	int exposure = atoi(argv[1]);
+	int imageNumber = atoi(argv[2]);;
+
+	int setup = ZWO_Setup();
+	
+	ZWO_Start_Exposure(exposure);
+
+	usleep(exposure*1000);
+	
+	int expose = 0;	
+	do{
+		expose = ZWO_Check_Exposure_Status();
+	}while(expose == 2);
+
+	ZWO_End_Exposure(imageNumber);
+
+	ZWO_Stop();
+	
+	//Write to FIFO
+	FILE * fifo = fopen("Image_Capture.fifo", "w");
+    if(fifo >= 0)
+    {
+		fprintf(fifo, "%d", 1);
+    } else {
+		printf("No FIFO found\n");
+	}
+
+	return 0;
+}
+
 //ZWO_Setup
 //Sets up the camera's configurating and connection, returns an error packet
 int ZWO_Setup(){
 	if(getNumberOfConnectedCameras() < 1){
+		printf("No cameras detected\n");
 		return 1;
 	}
 	
 	if(!openCamera(CAMERA_NUMBER)){
-		return 2;   
+		printf("Failed to open camera\n");		
+		return 2;
 	}
 
 	if(!initCamera()){
+		printf("Failed to initialize camera\n");		
 		return 3;
 	}	
 	
 	if(!setImageFormat(RESOLUTION_W, RESOLUTION_H, 1, IMG_RAW8)){
+		printf("Failed to set image format\n");		
 		return 5;
 	}
 	
 	pRgb=cvCreateImage(cvSize(RESOLUTION_W, RESOLUTION_H), IPL_DEPTH_8U, 1);
 	
 	if(pRgb == NULL){
+		printf("Failed to create image\n");		
 		return 4;
 	}
 
@@ -62,6 +103,7 @@ int ZWO_Check_Exposure_Status(){
 	switch(status)
 	{
 		case EXP_IDLE:
+			printf("Camera is idle\n");
 			return 1; 
 			break;
 		
@@ -74,6 +116,7 @@ int ZWO_Check_Exposure_Status(){
 			break;
 		
 		case EXP_FAILED:
+			printf("Exposure Failed\n");
 			return 3;
 			break;
 			
@@ -110,13 +153,13 @@ int ZWO_End_Exposure(int image_number){
 	name[6] = 'e';
 	name[7] = '_';
 	
-	name[i++] = (image_number +  48);
+	name[8] = (image_number +  48);
 	
-	name[i++] = '.';
-	name[i++] = 'j';
-	name[i++] = 'p';
-	name[i++] = 'g';
-	name[i++] = '\0';
+	name[9] = '.';
+	name[10] = 'j';
+	name[11] = 'p';
+	name[12] = 'g';
+	name[13] = '\0';
 	
 	cv::imwrite(name, image);
 	
