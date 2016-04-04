@@ -287,7 +287,7 @@ class captureImage(threading.Thread):
 		print "Exiting StrExp\n"
 	
 	def stop(self):
-		fifo.close()
+		self.fifo.close()
 		self._stop.set()
 
 """----------------------------------------------------------------------------------"""
@@ -321,12 +321,12 @@ ui.start()
 
 print "UI Thread Started"
 # Global Refresh Rate in tics/sec
-refreshRate = 100
+refreshRate = 200
 
 # NOTE! these values should not be written to without the controlSystemLock
 controlSystemLock = threading.Lock()
-p = [10,10,10] 	 # These lists are in Pitch Yaw Roll order
-i = [0,0,0]      # It is good form to update p,i,d immediatley before calling update_gains() to limit lock passes
+p = [30,20,30] 	 # These lists are in Pitch Yaw Roll order
+i = [30,20,30]      # It is good form to update p,i,d immediatley before calling update_gains() to limit lock passes
 d = [0,0,0]
 
 errx = 0 
@@ -388,9 +388,9 @@ if controlSystem.isAlive():
 if ui.isAlive():
 	ui.stop()
 	ui.join()
-if imCap.isAlive():
-	imCap.stop()
-	imCap.join()
+#if imCap.isAlive():
+#	imCap.stop()
+#	imCap.join()
 
 #remove the fifo
 os.system("rm Image_Capture.fifo")

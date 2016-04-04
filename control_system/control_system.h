@@ -82,7 +82,7 @@
 #define ROLL_CW_LIMIT 412
 
 /* Axis Saturation Limits */
-#define PITCH_SATURATION 200
+#define PITCH_SATURATION 400
 #define ROLL_SATURATION 200
 #define YAW_SATURATION 200
 
