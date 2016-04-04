@@ -70,8 +70,9 @@ class userInputThread(threading.Thread):
 					match = regex_three_floats.search(input)
 					if match:
 						(str1,str2,str3) = match.groups()
-						with cameraParamsLock:
-							(exposureTime,captureRate,maxImageCount) = (float(str1),float(str2),float(str3))
+						imCap.imageNumber = 0
+						(exposureTime,captureRate,maxImageCount) = (float(str1),float(str2),float(str3))
+						print "Stared Capture"
 
 				elif(cmd.group() == "Pyaw:"):
 					match = regex_val_float.search(input)
@@ -246,6 +247,8 @@ class captureImage(threading.Thread):
 	def __init__(self,):
 		threading.Thread.__init__(self)
 		self._stop = threading.Event()
+		
+		global cameraParamsLock
 		#Setup FIFO Here
 		try:
 			os.mkfifo("Image_Capture.fifo")
@@ -260,22 +263,23 @@ class captureImage(threading.Thread):
 		print "Starting StrExp\n"
 		startTime = 0
 		self.imageNumber = 0
-		while (not self._stop.isSet()) and (self.imageNumber < maxImageCount):	# Stop captureing once thread is called to exit or the image limit is hit
-			if (time.time() - startTime > captureRate):							# Only capture at the desired capture rate
-				#Capture an image here
-				print "Image Taken"
-				os.system("./camera_capture " + str(exposureTime) + " " + str(self.imageNumber))
-				
-				#Wait for return byte
-				while True:
-					byte = self.fifo.read(1)
-					if not byte:
-						time.sleep(0.1)
-						continue
-					else:
-						print "Capture Complete with error code " + byte
-						self.imageNumber += 1
-						break
+		while True:
+			if (not self._stop.isSet()) and (self.imageNumber < maxImageCount):	# Stop captureing once thread is called to exit or the image limit is hit
+				if (time.time() - startTime > captureRate):							# Only capture at the desired capture rate
+					#Capture an image here
+					print "Image Taken"
+					os.system("./camera_capture " + str(exposureTime) + " " + str(self.imageNumber))
+					
+					#Wait for return byte
+					while True:
+						byte = self.fifo.read(1)
+						if not byte:
+							time.sleep(0.1)
+							continue
+						else:
+							print "Capture Complete with error code " + byte
+							self.imageNumber += 1
+							break
 				
 			else:
 				time.sleep(0.1) 		# Try not to bog down the processor waiting until capture time
@@ -336,9 +340,9 @@ runStatus = "Stop"
 # end NOTE!
 
 # NOTE! these values should not be written to without the cameraParamsLock
-exposureTime = 250
+exposureTime = 1000
 captureRate = 10
-maxImageCount = 5
+maxImageCount = 0
 # end NOTE!
 
 imCap = captureImage()
