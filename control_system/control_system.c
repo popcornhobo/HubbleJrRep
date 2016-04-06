@@ -62,6 +62,8 @@ void* yaw_servo_get_status;
 
 void* yaw_servo_reset;
 
+/* Saturation Flags */
+char saturated[3];
 
 /* Function Definitions */
 int control_system_update()
@@ -110,14 +112,13 @@ int control_system_update()
 		qref = quatNorm(qref);
 		qerr = quatMult(qpos, quatConj(qref));	// Calculate the quaternion error
 		
-		/*
+		
 		if (qerr.q0 <0)
 		{
 			qerr = quatConj(qerr);	// The quaternion error needs to be adjusted to represent the shortest path
 		}
 		//printf("Quaternion Error: Q0:%lf   Q1:%lf   Q2:%lf   Q3:%lf\n", qerr.q0, qerr.q1, qerr.q2, qerr.q3);
 		
-		*/
 		/*
 		* The three imaginary components i,j,k now represent the per-axis errors of the system
 		*/ 
@@ -241,26 +242,41 @@ int control_system_init()
 	/* SETUP SERVOS */
 	
 	#ifdef USE_PITCH_JOINT_MODE
-		*(uint32_t *)pitch_servo_set_ccw = 1024;
-		*(uint32_t *)pitch_servo_set_cw = 0;
+		usleep(2000);
+		*(uint32_t *)pitch_servo_set_ccw = PITCH_CCW_LIMIT;
+		usleep(2000);
+		printf("Pitch CCW Error: %d\n", *(uint32_t *)pitch_servo_get_error);
 		
-		*(uint32_t *)pitch_servo_set_rate =  RESET_SPEED;
-		*(uint32_t *)pitch_servo_set_pos = 512;
+		
+		*(uint32_t *)pitch_servo_set_cw = PITCH_CW_LIMIT;
+		usleep(2000);
+		printf("Pitch CW Error: %d\n", *(uint32_t *)pitch_servo_get_error);
+		
+		//*(uint32_t *)pitch_servo_set_rate =  RESET_SPEED;
+		//*(uint32_t *)pitch_servo_set_pos = 512;
 	#else
+		usleep(2000);
 		*(uint32_t *)pitch_servo_set_ccw = 0;
+		usleep(2000);
 		*(uint32_t *)pitch_servo_set_cw = 0;
+		usleep(2000);
 	#endif
 	
 	
 	#ifdef USE_ROLL_JOINT_MODE
-		*(uint32_t *)roll_servo_set_ccw = 1024;
-		*(uint32_t *)roll_servo_set_cw = 0;
-		
-		*(uint32_t *)roll_servo_set_rate =  RESET_SPEED;
-		*(uint32_t *)roll_servo_set_pos = 512;
+		usleep(2000);
+		*(uint32_t *)roll_servo_set_ccw = ROLL_CCW_LIMIT;
+		usleep(2000);
+		*(uint32_t *)roll_servo_set_cw = ROLL_CW_LIMIT;
+		usleep(2000);
+		//*(uint32_t *)roll_servo_set_rate =  RESET_SPEED;
+		//*(uint32_t *)roll_servo_set_pos = 512;
 	#else
+		usleep(2000);
 		*(uint32_t *)roll_servo_set_ccw = 0;
+		usleep(2000);
 		*(uint32_t *)roll_servo_set_cw = 0;
+		usleep(2000);
 	#endif
 	
 	isInitialized = True;
@@ -337,13 +353,13 @@ void rotate_current_position(float pitch, float yaw, float roll)
 	printf("Quat Rot_Res_conj1: %f %f %f %f\n", qrot_res_conj.q0, qrot_res_conj.q1, qrot_res_conj.q2, qrot_res_conj.q3);
 	printf("Quat Rot_Res: %f %f %f %f\n", qrot_res.q0, qrot_res.q1, qrot_res.q2, qrot_res.q3);
 	
-	quaternion qrot_res_conj = quatConj(qrot_res);	// Create a quaternion object that is the conjugate of the rotation quat
+	qrot_res_conj = quatConj(qrot_res);	// Create a quaternion object that is the conjugate of the rotation quat
 	printf("Quat Rot_Res_conj: %f %f %f %f\n", qrot_res_conj.q0, qrot_res_conj.q1, qrot_res_conj.q2, qrot_res_conj.q3);
 	
 	quaternion firstMult = quatMult(qrot_res,reference);		// Multiply the rotation quaternion by the reference position
 	quaternion secondMult = quatMult(firstMult, qrot_res_conj);	// Then multiple the result of first mulitply by the conjugate of the rotation quaternion
 
-	reference = quatNorm(firstMult);	// The new rotated reference is now assigned to the global reference variable
+	reference = quatNorm(secondMult);	// The new rotated reference is now assigned to the global reference variable
 	
 	printf("New Quat: %f %f %f %f\n", reference.q0, reference.q1, reference.q2, reference.q3);
 }
@@ -375,7 +391,9 @@ void pid_loop(double error[], double rates[], float time_step)
 	for(axis= 0; axis< 3; axis++){
 		if(I[axis] == 0.0){
 			integral_error[axis] = 0;
-		} else {
+		}else if(saturated[axis]){
+			//Do nothing 
+		}else{
 			integral_error[axis] += error[axis] * time_step;
 		}
 		derivative_error[axis] =  (error[axis] - last_error[axis])/time_step;
@@ -413,11 +431,11 @@ void update_servos(double Pitch, double Yaw, double Roll)
 			/* Update Pitch */
 			if (Pitch < 0)
 			{
-				*(uint32_t *) pitch_servo_set_pos = 0;
+				*(uint32_t *) pitch_servo_set_pos = PITCH_CW_LIMIT;
 			}
 			else
 			{
-				*(uint32_t *) pitch_servo_set_pos = 1024;
+				*(uint32_t *) pitch_servo_set_pos = PITCH_CCW_LIMIT;
 			}
 			
 			/* Abs Roll */
@@ -435,6 +453,8 @@ void update_servos(double Pitch, double Yaw, double Roll)
 		}
 	#else
 		/* Update Pitch */
+		saturated[0] = 0;
+		
 		if (Pitch < 0) 
 		{
 			Pitch = abs(Pitch) + 1024; // 1024 is where negative values start for the motor
@@ -442,6 +462,7 @@ void update_servos(double Pitch, double Yaw, double Roll)
 			if(Pitch > (PITCH_SATURATION + 1024))
 			{
 				Pitch = PITCH_SATURATION + 1024;
+				saturated[0] = 1;
 			}
 		}
 		else
@@ -449,6 +470,7 @@ void update_servos(double Pitch, double Yaw, double Roll)
 			if(Pitch > PITCH_SATURATION)
 			{
 				Pitch = PITCH_SATURATION;
+				saturated[0] = 1;
 			}
 		}
 		
@@ -457,12 +479,15 @@ void update_servos(double Pitch, double Yaw, double Roll)
 	
 	
 	/* Update Yaw */
+	saturated[1] = 0;
+	
 	if (Yaw < 0)
 	{
 		Yaw = abs(Yaw) + 1024; // 1024 is where negative values start for the servo
 		if(Yaw > (YAW_SATURATION + 1024))
 		{
 			Yaw = YAW_SATURATION + 1024;
+			saturated[1] = 1;
 		}
 	}
 	else
@@ -470,6 +495,7 @@ void update_servos(double Pitch, double Yaw, double Roll)
 		if(Yaw > YAW_SATURATION)
 		{
 			Yaw = YAW_SATURATION;
+			saturated[1] = 1;
 		}
 	}
 	
@@ -481,11 +507,11 @@ void update_servos(double Pitch, double Yaw, double Roll)
 			/* Update Roll */
 			if (Roll < 0)
 			{
-				*(uint32_t *) roll_servo_set_pos = 0;
+				*(uint32_t *) roll_servo_set_pos = ROLL_CW_LIMIT;
 			}
 			else
 			{
-				*(uint32_t *) roll_servo_set_pos = 1024;
+				*(uint32_t *) roll_servo_set_pos = ROLL_CCW_LIMIT;
 			}
 			
 			/* Abs Roll */
@@ -503,12 +529,15 @@ void update_servos(double Pitch, double Yaw, double Roll)
 		}
 	#else 
 		/* Update Roll */
+		saturated[2] = 0;
+		
 		if (Roll < 0)
 		{
 			Roll = abs(Roll) + 1024; // 1024 is where negative values start for the servo
 			if(Roll> (ROLL_SATURATION + 1024))
 			{
 				Roll = ROLL_SATURATION + 1024;
+				saturated[2] = 1;
 			}
 		}
 		else
@@ -516,6 +545,7 @@ void update_servos(double Pitch, double Yaw, double Roll)
 			if(Roll > ROLL_SATURATION)
 			{
 				Roll = ROLL_SATURATION;
+				saturated[2] = 1;
 			}
 		}
 		

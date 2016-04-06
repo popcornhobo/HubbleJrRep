@@ -74,13 +74,17 @@
 
 #define ROLL_SERVO_RESET_ADDR				(0x00000100 + (0x100 * 4))
 
+/* Joint Mode angle limits */
+#define PITCH_CW_LIMIT 1200
+#define PITCH_CCW_LIMIT 1200
 
-
+#define ROLL_CCW_LIMIT 612
+#define ROLL_CW_LIMIT 412
 
 /* Axis Saturation Limits */
-#define PITCH_SATURATION 100
-#define ROLL_SATURATION 100
-#define YAW_SATURATION 100
+#define PITCH_SATURATION 400
+#define ROLL_SATURATION 200
+#define YAW_SATURATION 200
 
 /* Joint mode option */
 //#define USE_PITCH_JOINT_MODE

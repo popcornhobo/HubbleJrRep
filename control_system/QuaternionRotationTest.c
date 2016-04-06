@@ -5,7 +5,7 @@
 void rotate_current_position(float pitch, float yaw, float roll);
 
 
-quaternion reference = {.q0 = 0.2, .q1 = 0.7071, .q2 = 0.7071, .q3 = 0.7071};
+quaternion reference = {.q0 = 0, .q1 = 0, .q2 = 0.7071, .q3 = 0.7071};
 int main()
 {
 	int x = 90; //yaw
