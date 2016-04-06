@@ -31,7 +31,7 @@ BasicStepperDriver stepper(MOTOR_STEPS, DIR, STEP);
 // User constants
 #define MAXRANGE  300         // in degrees
 #define MAXRATE   1           // in degrees/sec
-#define MAXAMPL   30          // in Degrees
+#define MAXAMPL   20          // in Degrees
 #define GEAR_RATIO  29        // overall gear ratio of drive train
 
 // Global Variables //
