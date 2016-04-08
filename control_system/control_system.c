@@ -116,6 +116,7 @@ int control_system_update()
 		if (qerr.q0 <0)
 		{
 			qerr = quatConj(qerr);	// The quaternion error needs to be adjusted to represent the shortest path
+			qerr.q0 *= -1;
 		}
 		//printf("Quaternion Error: Q0:%lf   Q1:%lf   Q2:%lf   Q3:%lf\n", qerr.q0, qerr.q1, qerr.q2, qerr.q3);
 		
@@ -322,46 +323,27 @@ void rotate_current_position(float pitch, float yaw, float roll)
 	printf("Quat Yaw: %f %f %f %f\n", qrot_yaw.q0, qrot_yaw.q1, qrot_yaw.q2, qrot_yaw.q3);
 	printf("Quat Roll: %f %f %f %f\n", qrot_roll .q0, qrot_roll .q1, qrot_roll .q2, qrot_roll .q3);
 
-	/*
-	*	Calculate the per axis scalar componenets that will make up the rotation quaternion
-	*//* 
-	float c1 = cos(yaw_rad/2.0);
-	float c2 = cos(pitch_rad/2.0);
-	float c3 = cos(roll_rad/2.0);
-	
-	float s1 = sin(yaw_rad/2.0);
-	float s2 = sin(pitch_rad/2.0);
-	float s3 = sin(roll_rad/2.0); */
-
-	/*
-	* Calculate the quaternion values that correspond to the given relative euler angle rotations
-	*/
-	/* float res_q0 = sqrt(1.0 + c1 *c2 + c1 * c3 - s1 * s2 *s3 + c2 * c3)/2.0;
-	float res_q1 = (c2 * s3 + c1 * s3 + s1 * s2 * c3)/(4.0 * res_q0);
-	float res_q2 = (s1 * c2 + s1 * c3 + c1 * s2 * s3)/(4.0 * res_q0);
-	float res_q3 = (-s1 * s3 + c1 * s2 * c3 + s2)/(4.0* res_q0); */
-
-	quaternion qrot_pitch_conj = quatConj(qrot_pitch);
-	quaternion qrot_roll_conj = quatConj(qrot_roll);
-	quaternion qrot_yaw_conj = quatConj(qrot_yaw);
-	
+	//Calculate the resulting rotation of performing each of the above rotations
 	quaternion qrot_res = quatMult(qrot_pitch, qrot_yaw);
 	qrot_res = quatMult(qrot_roll,qrot_res);// Create a quaternion object from the calculated pieces
 	
-	quaternion qrot_res_conj = quatMult(qrot_pitch_conj, qrot_yaw_conj);
-	qrot_res_conj = quatMult(qrot_roll_conj, qrot_res_conj);// Create a quaternion object from the calculated pieces
-	printf("Quat Rot_Res_conj1: %f %f %f %f\n", qrot_res_conj.q0, qrot_res_conj.q1, qrot_res_conj.q2, qrot_res_conj.q3);
-	printf("Quat Rot_Res: %f %f %f %f\n", qrot_res.q0, qrot_res.q1, qrot_res.q2, qrot_res.q3);
+	printf("Quat Rotation: %f %f %f %f\n", qrot_roll .q0, qrot_roll .q1, qrot_roll .q2, qrot_roll .q3);
 	
-	qrot_res_conj = quatConj(qrot_res);	// Create a quaternion object that is the conjugate of the rotation quat
-	printf("Quat Rot_Res_conj: %f %f %f %f\n", qrot_res_conj.q0, qrot_res_conj.q1, qrot_res_conj.q2, qrot_res_conj.q3);
+	reference = quatMult(qrot_res,reference);		// Multiply the rotation quaternion by the reference quaternion
 	
-	quaternion firstMult = quatMult(qrot_res,reference);		// Multiply the rotation quaternion by the reference position
-	quaternion secondMult = quatMult(firstMult, qrot_res_conj);	// Then multiple the result of first mulitply by the conjugate of the rotation quaternion
-
-	reference = quatNorm(secondMult);	// The new rotated reference is now assigned to the global reference variable
+	//Normalize the reference for saftey
+	reference = quatNorm(reference);
 	
-	printf("New Quat: %f %f %f %f\n", reference.q0, reference.q1, reference.q2, reference.q3);
+	//If the reference is rotated the long way around, fix it 
+	if (reference.q0 <0)
+	{
+		reference = quatConj(reference);	// The quaternion error needs to be adjusted to represent the shortest path
+		reference.q0 *= -1;
+	}
+	
+	printf("New Reference: %f %f %f %f\n", reference.q0, reference.q1, reference.q2, reference.q3);
+	
+	
 }
 
 void update_gains(float P_pitch, float P_yaw, float P_roll, float I_pitch, float I_yaw, float I_roll,  float D_pitch, float D_yaw, float D_roll)
