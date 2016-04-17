@@ -315,6 +315,13 @@ class captureImage(threading.Thread):
 			# break
 
 #simpleImageCaptureTest()
+try:
+	os.mkfifo("Command_fifo.fifo")
+except:
+	os.system("rm Command_fifo.fifo")
+	os.mkfifo("Command_fifo.fifo")
+
+cmdfifo = open("Command_fifo.fifo", "r+")
 
 ui = userInputThread()
 ui.start()
@@ -369,6 +376,22 @@ else:
 	The main thread 
 """
 while not(runStatus == "Quit"):
+	byte = cmdfifo.read(1)
+	if byte and byte == 's':
+		with runStatusLock:
+			runStatus = "Start"
+	elif byte and byte == 'q':
+		with runStatusLock:
+			runStatus = "Quit"
+		cmdfifo.close()
+	elif byte and byte == 'y':
+		with controlSystemLock:
+			p = [30,6,30]
+			ControlSystemWrapper.update_gains(p,i,d)
+	elif byte and byte == 'h':
+		with controlSystemLock:
+			p = [30,12,30]
+			ControlSystemWrapper.update_gains(p,i,d)
 	status = DataCom.dataStatus()
 	if status != -1:
 		if status == 0x01:
@@ -392,8 +415,10 @@ if ui.isAlive():
 #	imCap.stop()
 #	imCap.join()
 
-#remove the fifo
+#remove the image fifo
 os.system("rm Image_Capture.fifo")
+#remove the command fifo
+os.system("rm Command_fifo.fifo")
 
 print controlSystem.isAlive()
 print ui.isAlive()
