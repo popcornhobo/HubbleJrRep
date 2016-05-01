@@ -1,8 +1,6 @@
 #include <Adafruit_BNO055.h>
-#include <Stepper.h>
 #include <String.h>
 #include <Arduino.h>
-#include "BasicStepperDriver.h"
 
 // Motor steps per revolution. Most steppers are 200 steps or 1.8 degrees/step
 #define MOTOR_STEPS 200
@@ -23,16 +21,13 @@
 
           
 #define RATE_I_CONSTANT 10 // The integrating constant for the actuator rate control
-#define RATE_P_CONSTANT 75
-
-// instantiate stepper object
-BasicStepperDriver stepper(MOTOR_STEPS, DIR, STEP); 
+#define RATE_P_CONSTANT 75 // The proportional constant for the actuator rate control
 
 // User constants
 #define MAXRANGE  300         // in degrees
 #define MAXRATE   2           // in degrees/sec
 #define MAXAMPL   20          // in Degrees
-#define GEAR_RATIO  29        // overall gear ratio of drive train
+#define GEAR_RATIO  22        // overall gear ratio of drive train
 
 // Global Variables //
 
@@ -152,7 +147,7 @@ void loop() {
 int getActuatorPWM(float driveStrength)
 {
   float drivePWM = 0;
-  drivePWM = map(driveStrength,0,255,255,0); // map the control output to the PWM range
+  drivePWM = map(driveStrength,0,255,255,0); // map the control loop output to the PWM range
   if (drivePWM > 255)
   {
     drivePWM = 255;
@@ -175,26 +170,14 @@ void driveActuator(int range, float rate)
   Actuator_time = millis();                           // updated the previous time with the cur time for next loop
   float desiredRate = rate;  // gives us desired degrees/sec
   float currentRate = (Angle-Prev_angle)/dt;  // Change in angle divided by change in time to produce deg/sec
-//  if(AllowPrint)
-//  {
-//    Serial.print("desiredRate: ");
-//    Serial.print(desiredRate,4);
-//    Serial.print("\t");
-//  }
   if (currentRate < 0)
   {
     currentRate = currentRate*-1;
   }
-//  if(AllowPrint)
-//  {
-//    Serial.print("currentRate:");
-//    Serial.print(currentRate,8);
-//    Serial.print("\t");
-//  }
 
-  Rate_error_integral += (desiredRate-currentRate)*dt;   // This accumulates the signed rate error to correct the actuator speed, it is tunable with RATE_CONSTANT
-  Rate_error = RATE_P_CONSTANT*(desiredRate-currentRate);
-  Rate_error += RATE_I_CONSTANT*Rate_error_integral;
+  Rate_error_integral += (desiredRate-currentRate)*dt;   // This accumulates the signed rate error to correct the actuator speed, it is tunable with RATE_I_CONSTANT
+  Rate_error = RATE_P_CONSTANT*(desiredRate-currentRate);// Calculate the proportional error
+  Rate_error += RATE_I_CONSTANT*Rate_error_integral;     // Sum the propotional and integral errors
 
   if (Rate_error < 0)
   {
@@ -204,38 +187,22 @@ void driveActuator(int range, float rate)
   {
     Rate_error = 255;
   }
-//  if(AllowPrint)
-//  {
-//    Serial.print("Rate_error: ");
-//    Serial.print(Rate_error);
-//    Serial.print("\t");
-//  }
-//  
+
   int PWM = getActuatorPWM(Rate_error);    // Convert the accumulated rate error into PWM to drive the actuator
   if (range == 0)
   {
     PWM = 255;
-    Rate_error_integral = 0;
+    Rate_error_integral = 0;    // Turn off the actuator and zero the integral term
   }
   
-//  if(AllowPrint)
-//  {
-//    Serial.print("PWM: ");
-//    Serial.print(PWM);
-//    Serial.print("\t");
-//  }
-  //Serial.print("X: ");Serial.print(EulerData[0]);
-  //Serial.print("\tY: ");Serial.print(EulerData[1]);
-  //Serial.print("\tZ: ");Serial.println(EulerData[2]);
-  
-  if(Angle < range/2.0f and UpDown)
+  if(Angle < range/2.0f and UpDown)   // Change direction after reaching lower tilt limit
   {
     analogWrite(D1,PWM);
     digitalWrite(D2,HIGH);
     digitalWrite(IN1,HIGH);
     digitalWrite(IN2,LOW);
   }
-  else if(Angle > -1*range/2.0f and !UpDown)
+  else if(Angle > -1*range/2.0f and !UpDown) // Change direction after reaching upper tilt limit
   {
     analogWrite(D1,PWM);
     digitalWrite(D2,HIGH);
@@ -247,7 +214,7 @@ void driveActuator(int range, float rate)
     UpDown = !UpDown;
     if (StepperActuator_sync)
     {
-      Stepper_dir = !Stepper_dir;
+      Stepper_dir = !Stepper_dir;   // If sync is enable then change the stepper direction with the tilt table
     }
   }
 }
@@ -257,28 +224,28 @@ void driveStepper(float range)
   if (Display_rate)
   {
     // Set the clock divider for the stepper PWM
-    TCCR2B = TCCR2B & 0b11111000 | 0x02;
+    TCCR2B = TCCR2B & 0b11111000 | 0x02;    // Lower the clock divider by a factor of 4 to rotate faster
     range = range/4;
   }
   else
   {
     // Set the clock divider for the stepper PWM
-    TCCR2B = TCCR2B & 0b11111000 | 0x03;
+    TCCR2B = TCCR2B & 0b11111000 | 0x03;    // Closest setting to HASP payload rotation rates
   }
   
   if (range == 0)
   {
-    digitalWrite(EN,HIGH);
+    digitalWrite(EN,HIGH);    // Disable the stepper if no rotation is wanted
   }
   else
   {
-    analogWrite(STEP,125);
-    digitalWrite(EN,LOW);
+    analogWrite(STEP,125);    // Write a 50% duty cycle for consistant stepping
+    digitalWrite(EN,LOW);     // Enable the stepper
     if (!StepperActuator_sync)
     {
-      float rotationTime = 8.35f*((range*GEAR_RATIO)/360.0f);
+      float rotationTime = 8.35f*((range*GEAR_RATIO)/360.0f);   // Calculate the time it will take to travel the given range
     
-      if((millis() - Stepper_time) >= rotationTime*1000)
+      if((millis() - Stepper_time) >= rotationTime*1000)      // Wait the calculated time then switch directions
       {
         Stepper_dir = !Stepper_dir;
         Stepper_time = millis();
@@ -298,12 +265,11 @@ void driveStepper(float range)
 
 void serialEvent()
 {
-  // example packet RPM:1.2
-  digitalWrite(D2,LOW);
-  char packetId[5];
+  digitalWrite(D2,LOW); // Disable the stepper before changing settings
+  char packetId[5];     // Character buffer for incoming serial packets
   int switchVal;
   
-  int i = Serial.readBytesUntil(':', packetId, 4);
+  int i = Serial.readBytesUntil(':', packetId, 4);  // read at most 4 bytes until a ':' and put them in the buffer
   
   if(i == 0)
   {
@@ -416,10 +382,12 @@ void serialEvent()
         if(data == 0)
         {
           Display_rate = false;
+          Serial.println("\nDisplay Mode is No longer Active\n");
         }
         else
         {
           Display_rate = true;
+          Serial.println("\nDisplay Mode is Now Active\n");
         }
         AllowPrint = true;
         delay(100);

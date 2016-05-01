@@ -384,14 +384,18 @@ while not(runStatus == "Quit"):
 		with runStatusLock:
 			runStatus = "Quit"
 		cmdfifo.close()
+	elif byte and byte == 'p':
+		with runStatusLock:
+			runStatus = "Stop"
 	elif byte and byte == 'y':
 		with controlSystemLock:
 			p = [30,6,30]
 			ControlSystemWrapper.update_gains(p,i,d)
 	elif byte and byte == 'h':
 		with controlSystemLock:
-			p = [30,12,30]
+			p = [30,8,30]
 			ControlSystemWrapper.update_gains(p,i,d)
+
 	status = DataCom.dataStatus()
 	if status != -1:
 		if status == 0x01:
