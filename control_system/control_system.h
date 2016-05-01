@@ -84,7 +84,7 @@
 /* Axis Saturation Limits */
 #define PITCH_SATURATION 400
 #define ROLL_SATURATION 200
-#define YAW_SATURATION 200
+#define YAW_SATURATION 400
 
 /* Joint mode option */
 //#define USE_PITCH_JOINT_MODE

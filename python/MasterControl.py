@@ -348,11 +348,11 @@ maxImageCount = 0
 imCap = captureImage()
 imCap.start()
 
-hostIP = "192.168.1.2"
-udpIP = "192.168.1.1"
-inputPort = 18001
-outputPort = 18002
-DataCom.portalInit(udpIP, hostIP, outputPort, inputPort)	# Setup the UDP port using the defined information
+#hostIP = "192.168.1.2"
+#udpIP = "192.168.1.1"
+#inputPort = 18001
+#outputPort = 18002
+#DataCom.portalInit(udpIP, hostIP, outputPort, inputPort)	# Setup the UDP port using the defined information
 
 test = ControlSystemWrapper.control_system_update()			# Call update for the first time now to intialize the system
 
@@ -369,19 +369,19 @@ else:
 	The main thread 
 """
 while not(runStatus == "Quit"):
-	status = DataCom.dataStatus()
-	if status != -1:
-		if status == 0x01:
-			DataCom.sendData([0x01,0x03,xerr,yerr,zerr])		# Order is [packet Id, dataLength, dataBytes]
-		elif status == -2:
-			DataCom.sendData([0x00,0x01,0x00])
-	else:
-		time.sleep(0.008)	# Sleep for just under 1/100th of a second to save processor power but not stall DataCom transmissions
+#	status = DataCom.dataStatus()
+#	if status != -1:
+#		if status == 0x01:
+#			DataCom.sendData([0x01,0x03,xerr,yerr,zerr])		# Order is [packet Id, dataLength, dataBytes]
+#		elif status == -2:
+#			DataCom.sendData([0x00,0x01,0x00])
+#	else:
+	time.sleep(0.008)	# Sleep for just under 1/100th of a second to save processor power but not stall DataCom transmissions
 
 #Quit All threads NOW!!!!
 
-if DataCom:
-	DataCom.shutDownPortal()
+#if DataCom:
+	#DataCom.shutDownPortal()
 if controlSystem.isAlive():
 	controlSystem.stop()
 	controlSystem.join()
@@ -397,7 +397,7 @@ os.system("rm Image_Capture.fifo")
 
 print controlSystem.isAlive()
 print ui.isAlive()
-print DataCom.portalIsAlive()
+#print DataCom.portalIsAlive()
 
 try:
 	os._exit(1)
