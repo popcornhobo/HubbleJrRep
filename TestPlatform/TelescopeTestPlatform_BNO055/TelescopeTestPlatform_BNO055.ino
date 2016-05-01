@@ -1,11 +1,10 @@
 #include <Adafruit_BNO055.h>
-#include <Stepper.h>
 #include <String.h>
 #include <Arduino.h>
-#include "BasicStepperDriver.h"
 
 // Motor steps per revolution. Most steppers are 200 steps or 1.8 degrees/step
 #define MOTOR_STEPS 200
+
 
 // All the wires needed for full motor functionality
 #define DIR 10       // Stepper Direction
@@ -23,16 +22,13 @@
 
           
 #define RATE_I_CONSTANT 10 // The integrating constant for the actuator rate control
-#define RATE_P_CONSTANT 75
-
-// instantiate stepper object
-BasicStepperDriver stepper(MOTOR_STEPS, DIR, STEP); 
+#define RATE_P_CONSTANT 75 // The proportional constant for the actuator rate control
 
 // User constants
 #define MAXRANGE  300         // in degrees
-#define MAXRATE   1           // in degrees/sec
-#define MAXAMPL   30          // in Degrees
-#define GEAR_RATIO  29        // overall gear ratio of drive train
+#define MAXRATE   2           // in degrees/sec
+#define MAXAMPL   20          // in Degrees
+#define GEAR_RATIO  22        // overall gear ratio of drive train
 
 // Global Variables //
 
@@ -46,6 +42,8 @@ float Stepper_range = 0;
 bool Stepper_overflow = false;
 bool StepperActuator_sync = true; // This will cause the stepper to change direction at the same time as the actuator
                                   // This allows for the largest uninteruppted test interval
+                                  
+bool Display_rate = false;        // Allows the stepper to be driven faster than HASP for displaying functionality
 
 // Actuator rate control variables
 float Prev_angle = 0;
@@ -82,7 +80,11 @@ void setup() {
   Serial.println("Commands: RANGE: Rotation Range to Rotate Across in Degrees");
   Serial.println("\t\t\t\t\tRATE: Rate of Vertical Oscillation in deg/s");
   Serial.println("\t\t\t\t\tAMPL: Amplitude of Vertical Oscillation in Degrees");
-  Serial.println("All Commands are follow by :'Float' where 'Float' is the value to set");
+  Serial.println("\t\t\t\t\tRANGE: Range of rotation in Degrees");
+  Serial.println("\t\t\t\t\tSYNC: Synchronise the direction change for both tilt and rotation");
+  Serial.println("\t\t\t\t\tDISP: Adjust the rotation rate to be 4 times the HASP rate for displaying");
+  Serial.println("All Commands are followed by ':Float' where Float is the value to set");
+  AllowPrint = true;
   delay(1000);
   
   // Using MS pins set microstep to 1/16th steps
@@ -105,8 +107,7 @@ void setup() {
 }
 
 void loop() {  
-  AllowPrint = false;
-  if(millis() - Print_time >= 250)
+  if(AllowPrint)
   {
     Print_time = millis();
     Serial.print("Oscil. Rate: ");
@@ -119,8 +120,25 @@ void loop() {
     Serial.print(Stepper_range);
     Serial.print("\t\t");
     Serial.print("Synchronization: ");
-    Serial.println(StepperActuator_sync);
-    AllowPrint = true;
+    if (StepperActuator_sync)
+    {
+      Serial.print("On");
+    }
+    else
+    {
+      Serial.print("Off");
+    }
+    Serial.print("\t\t");
+    Serial.print("Display Mode: ");
+    if (Display_rate)
+    {
+      Serial.println("On");
+    }
+    else
+    {
+      Serial.println("Off");
+    }
+    AllowPrint = false;
   }
   driveActuator(Actuator_ampl, Actuator_rate);
   driveStepper(Stepper_range);
@@ -130,7 +148,7 @@ void loop() {
 int getActuatorPWM(float driveStrength)
 {
   float drivePWM = 0;
-  drivePWM = map(driveStrength,0,255,255,0); // map the control output to the PWM range
+  drivePWM = map(driveStrength,0,255,255,0); // map the control loop output to the PWM range
   if (drivePWM > 255)
   {
     drivePWM = 255;
@@ -153,26 +171,14 @@ void driveActuator(int range, float rate)
   Actuator_time = millis();                           // updated the previous time with the cur time for next loop
   float desiredRate = rate;  // gives us desired degrees/sec
   float currentRate = (Angle-Prev_angle)/dt;  // Change in angle divided by change in time to produce deg/sec
-//  if(AllowPrint)
-//  {
-//    Serial.print("desiredRate: ");
-//    Serial.print(desiredRate,4);
-//    Serial.print("\t");
-//  }
   if (currentRate < 0)
   {
     currentRate = currentRate*-1;
   }
-//  if(AllowPrint)
-//  {
-//    Serial.print("currentRate:");
-//    Serial.print(currentRate,8);
-//    Serial.print("\t");
-//  }
 
-  Rate_error_integral += (desiredRate-currentRate)*dt;   // This accumulates the signed rate error to correct the actuator speed, it is tunable with RATE_CONSTANT
-  Rate_error = RATE_P_CONSTANT*(desiredRate-currentRate);
-  Rate_error += RATE_I_CONSTANT*Rate_error_integral;
+  Rate_error_integral += (desiredRate-currentRate)*dt;   // This accumulates the signed rate error to correct the actuator speed, it is tunable with RATE_I_CONSTANT
+  Rate_error = RATE_P_CONSTANT*(desiredRate-currentRate);// Calculate the proportional error
+  Rate_error += RATE_I_CONSTANT*Rate_error_integral;     // Sum the propotional and integral errors
 
   if (Rate_error < 0)
   {
@@ -182,37 +188,22 @@ void driveActuator(int range, float rate)
   {
     Rate_error = 255;
   }
-//  if(AllowPrint)
-//  {
-//    Serial.print("Rate_error: ");
-//    Serial.print(Rate_error);
-//    Serial.print("\t");
-//  }
-//  
+
   int PWM = getActuatorPWM(Rate_error);    // Convert the accumulated rate error into PWM to drive the actuator
   if (range == 0)
   {
     PWM = 255;
+    Rate_error_integral = 0;    // Turn off the actuator and zero the integral term
   }
   
-//  if(AllowPrint)
-//  {
-//    Serial.print("PWM: ");
-//    Serial.print(PWM);
-//    Serial.print("\t");
-//  }
-  //Serial.print("X: ");Serial.print(EulerData[0]);
-  //Serial.print("\tY: ");Serial.print(EulerData[1]);
-  //Serial.print("\tZ: ");Serial.println(EulerData[2]);
-  
-  if(Angle < range/2.0f and UpDown)
+  if(Angle < range/2.0f and UpDown)   // Change direction after reaching lower tilt limit
   {
     analogWrite(D1,PWM);
     digitalWrite(D2,HIGH);
     digitalWrite(IN1,HIGH);
     digitalWrite(IN2,LOW);
   }
-  else if(Angle > -1*range/2.0f and !UpDown)
+  else if(Angle > -1*range/2.0f and !UpDown) // Change direction after reaching upper tilt limit
   {
     analogWrite(D1,PWM);
     digitalWrite(D2,HIGH);
@@ -224,51 +215,62 @@ void driveActuator(int range, float rate)
     UpDown = !UpDown;
     if (StepperActuator_sync)
     {
-      Stepper_dir = !Stepper_dir;
+      Stepper_dir = !Stepper_dir;   // If sync is enable then change the stepper direction with the tilt table
     }
   }
 }
 
 void driveStepper(float range)
 {
-    if (range == 0)
+  if (Display_rate)
+  {
+    // Set the clock divider for the stepper PWM
+    TCCR2B = TCCR2B & 0b11111000 | 0x02;    // Lower the clock divider by a factor of 4 to rotate faster
+    range = range/4;
+  }
+  else
+  {
+    // Set the clock divider for the stepper PWM
+    TCCR2B = TCCR2B & 0b11111000 | 0x03;    // Closest setting to HASP payload rotation rates
+  }
+  
+  if (range == 0)
+  {
+    digitalWrite(EN,HIGH);    // Disable the stepper if no rotation is wanted
+  }
+  else
+  {
+    analogWrite(STEP,125);    // Write a 50% duty cycle for consistant stepping
+    digitalWrite(EN,LOW);     // Enable the stepper
+    if (!StepperActuator_sync)
     {
-      digitalWrite(EN,HIGH);
+      float rotationTime = 8.35f*((range*GEAR_RATIO)/360.0f);   // Calculate the time it will take to travel the given range
+    
+      if((millis() - Stepper_time) >= rotationTime*1000)      // Wait the calculated time then switch directions
+      {
+        Stepper_dir = !Stepper_dir;
+        Stepper_time = millis();
+      }
+    }
+    
+    if (Stepper_dir)
+    {
+      digitalWrite(DIR,LOW);
     }
     else
     {
-      analogWrite(STEP,125);
-      digitalWrite(EN,LOW);
-      if (!StepperActuator_sync)
-      {
-        float rotationTime = 8.35f*((range*GEAR_RATIO)/360.0f);
-      
-        if((millis() - Stepper_time) >= rotationTime*1000)
-        {
-          Stepper_dir = !Stepper_dir;
-          Stepper_time = millis();
-        }
-      }
-      
-      if (Stepper_dir)
-      {
-        digitalWrite(DIR,LOW);
-      }
-      else
-      {
-        digitalWrite(DIR,HIGH);
-      }
+      digitalWrite(DIR,HIGH);
     }
+  }
 }
 
 void serialEvent()
 {
-  // example packet RPM:1.2
-  digitalWrite(D2,LOW);
-  char packetId[5];
+  digitalWrite(D2,LOW); // Disable the stepper before changing settings
+  char packetId[5];     // Character buffer for incoming serial packets
   int switchVal;
   
-  int i = Serial.readBytesUntil(':', packetId, 4);
+  int i = Serial.readBytesUntil(':', packetId, 4);  // read at most 4 bytes until a ':' and put them in the buffer
   
   if(i == 0)
   {
@@ -279,25 +281,30 @@ void serialEvent()
     packetId[i] = '\0';
     
     float data = Serial.parseFloat();
-    if((String)packetId == "RATE")
+    if((String)packetId == (String)"RATE")
     {
       switchVal = 1;
     }
-    else if((String)packetId == "AMPL")
+    else if((String)packetId == (String)"AMPL")
     {
       switchVal = 2;
     }
-    else if((String)packetId == "RANG")
+    else if((String)packetId == (String)"RANG")
     {
       switchVal = 3;
     }
-    else if((String)packetId == "SYNC")
+    else if((String)packetId == (String)"SYNC")
     {
       switchVal = 4;
     }
+    else if((String)packetId == (String)"DISP")
+    {
+      switchVal = 5;
+    }
     else
     {
-      Serial.println("Serial Error No Valid Data Read, Please Re-enter Values");
+      Serial.println("Serial Error No Valid Data Read, Please Re-enter Values\n");
+      switchVal = 0;
     }
     
     switch(switchVal){
@@ -307,32 +314,36 @@ void serialEvent()
           Actuator_rate = data;
           Serial.print("\nRate set to ");
           Serial.println(data);
+          Serial.print("\n");
         }
         else
         {
           Actuator_rate = MAXRATE;
           Serial.print("\nMax rate is ");
           Serial.print(MAXRATE);
-          Serial.println(" :Rate set to max");
+          Serial.println(" :Rate set to max\n");
         }
-        delay(1000);
+        AllowPrint = true;
+        delay(100);
         break;
       case 2:
         if(data <= MAXAMPL)
         {
           Actuator_ampl = data;
-          Serial.print("\nAmplitude set to ");
+          Serial.print("\nAmplitude set to");
           Serial.println(data);
+          Serial.print("\n");
         }
         else
         {
           Actuator_ampl = MAXAMPL;
           Serial.print("\nMax ampltiude is ");
           Serial.print(MAXAMPL);
-          Serial.println(" :Amplitude set to max");
+          Serial.println(" :Amplitude set to max\n");
           
         }
-        delay(1000);
+        AllowPrint = true;
+        delay(100);
         break;
      case 3:
         if(data <= MAXRANGE)
@@ -340,6 +351,7 @@ void serialEvent()
           Stepper_range = data;
           Serial.print("\nRange set to: ");
           Serial.println(data);
+          Serial.print("\n");
           
         }
         else
@@ -347,23 +359,39 @@ void serialEvent()
           Stepper_range = MAXRANGE;
           Serial.print("\nMax  rotation range is ");
           Serial.print(MAXRANGE);
-          Serial.println(" :Range set to max");
+          Serial.println(" :Range set to max\n");
         }
-        delay(1000);
+        AllowPrint = true;
+        delay(100);
         break;
      case 4:
         if(data == 0)
         {
           StepperActuator_sync = false;
-          Serial.println("\nThe direction changes are no longer synchronous");
+          Serial.println("\nThe direction changes are no longer synchronous\n");
           
         }
         else
         {
           StepperActuator_sync = true;
-          Serial.println("\nThe direction changes are now synchronous");
+          Serial.println("\nThe direction changes are now synchronous\n");
         }
-        delay(1000);
+        AllowPrint = true;
+        delay(100);
+        break;
+      case 5:
+        if(data == 0)
+        {
+          Display_rate = false;
+          Serial.println("\nDisplay Mode is No longer Active\n");
+        }
+        else
+        {
+          Display_rate = true;
+          Serial.println("\nDisplay Mode is Now Active\n");
+        }
+        AllowPrint = true;
+        delay(100);
         break;
     }
   }

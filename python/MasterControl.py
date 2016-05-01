@@ -315,6 +315,13 @@ class captureImage(threading.Thread):
 			# break
 
 #simpleImageCaptureTest()
+try:
+	os.mkfifo("Command_fifo.fifo")
+except:
+	os.system("rm Command_fifo.fifo")
+	os.mkfifo("Command_fifo.fifo")
+
+cmdfifo = open("Command_fifo.fifo", "r+")
 
 ui = userInputThread()
 ui.start()
@@ -369,6 +376,7 @@ else:
 	The main thread 
 """
 while not(runStatus == "Quit"):
+<<<<<<< HEAD
 #	status = DataCom.dataStatus()
 #	if status != -1:
 #		if status == 0x01:
@@ -377,6 +385,36 @@ while not(runStatus == "Quit"):
 #			DataCom.sendData([0x00,0x01,0x00])
 #	else:
 	time.sleep(0.008)	# Sleep for just under 1/100th of a second to save processor power but not stall DataCom transmissions
+=======
+	byte = cmdfifo.read(1)
+	if byte and byte == 's':
+		with runStatusLock:
+			runStatus = "Start"
+	elif byte and byte == 'q':
+		with runStatusLock:
+			runStatus = "Quit"
+		cmdfifo.close()
+	elif byte and byte == 'p':
+		with runStatusLock:
+			runStatus = "Stop"
+	elif byte and byte == 'y':
+		with controlSystemLock:
+			p = [30,6,30]
+			ControlSystemWrapper.update_gains(p,i,d)
+	elif byte and byte == 'h':
+		with controlSystemLock:
+			p = [30,8,30]
+			ControlSystemWrapper.update_gains(p,i,d)
+
+	status = DataCom.dataStatus()
+	if status != -1:
+		if status == 0x01:
+			DataCom.sendData([0x01,0x03,xerr,yerr,zerr])		# Order is [packet Id, dataLength, dataBytes]
+		elif status == -2:
+			DataCom.sendData([0x00,0x01,0x00])
+	else:
+		time.sleep(0.008)	# Sleep for just under 1/100th of a second to save processor power but not stall DataCom transmissions
+>>>>>>> SethsDevBranch
 
 #Quit All threads NOW!!!!
 
@@ -392,8 +430,10 @@ if ui.isAlive():
 #	imCap.stop()
 #	imCap.join()
 
-#remove the fifo
+#remove the image fifo
 os.system("rm Image_Capture.fifo")
+#remove the command fifo
+os.system("rm Command_fifo.fifo")
 
 print controlSystem.isAlive()
 print ui.isAlive()
